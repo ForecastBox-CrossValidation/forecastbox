@@ -1,0 +1,101 @@
+site_name: ForecastBox
+site_description: Forecast engine for the NodesEcon ecosystem
+site_url: https://nodesecon.github.io/forecastbox/
+repo_url: https://github.com/nodesecon/forecastbox
+repo_name: nodesecon/forecastbox
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - content.code.copy
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]
+          options:
+            show_source: true
+            show_root_heading: true
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - pymdownx.arithmatex:
+      generic: true
+  - toc:
+      permalink: true
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quickstart: getting-started/quickstart.md
+    - Concepts: getting-started/concepts.md
+  - User Guide:
+    - Auto-Forecast: user-guide/auto-forecast.md
+    - Combination: user-guide/combination.md
+    - Evaluation: user-guide/evaluation.md
+    - Scenarios: user-guide/scenarios.md
+    - Nowcasting: user-guide/nowcasting.md
+    - Pipeline: user-guide/pipeline.md
+    - CLI: user-guide/cli.md
+  - API Reference:
+    - Core: api/core.md
+    - Auto: api/auto.md
+    - Combination: api/combination.md
+    - Evaluation: api/evaluation.md
+    - Metrics: api/metrics.md
+    - Scenarios: api/scenarios.md
+    - Nowcasting: api/nowcasting.md
+    - Pipeline: api/pipeline.md
+    - Visualization: api/viz.md
+    - Reports: api/reports.md
+    - CLI: api/cli.md
+    - Datasets: api/datasets.md
+  - Examples:
+    - Basic Forecast: examples/basic_forecast.md
+    - Combination Comparison: examples/combination_comparison.md
+    - Nowcast GDP: examples/nowcast_gdp.md
+    - Scenario Analysis: examples/scenario_analysis.md
+    - Forecast Monitor: examples/forecast_monitor.md
+    - Full Experiment: examples/full_experiment.md
+  - Theory:
+    - AutoARIMA: theory/auto_arima.md
+    - Forecast Combination: theory/forecast_combination.md
+    - Diebold-Mariano Test: theory/diebold_mariano.md
+    - Model Confidence Set: theory/model_confidence_set.md
+    - MIDAS: theory/midas.md
+    - News Decomposition: theory/news_decomposition.md
+    - Bates-Granger: theory/bates_granger.md
+  - Contributing: contributing.md
+  - Changelog: changelog.md

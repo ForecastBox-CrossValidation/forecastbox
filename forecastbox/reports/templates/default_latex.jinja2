@@ -1,0 +1,85 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{float}
+\geometry{margin=2.5cm}
+
+\title{ {{- metadata.title | default('Forecast Report') -}} }
+\author{ {{- metadata.author | default('') -}} }
+\date{ {{- metadata.date | default('\\today') -}} }
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+{% for section in sections %}
+\section{ {{- section.title | default('Section') -}} }
+
+{% if section.text %}
+{{ section.text }}
+{% endif %}
+
+{% if section.type == 'summary' and section.key_metrics %}
+\begin{table}[H]
+\centering
+\begin{tabular}{lr}
+\toprule
+Metric & Value \\
+\midrule
+{% for name, value in section.key_metrics.items() %}
+{{ name }} & {{ "%.4f" | format(value) }} \\
+{% endfor %}
+\bottomrule
+\end{tabular}
+\caption{Key Metrics}
+\end{table}
+{% endif %}
+
+{% if section.type == 'models' and section.models %}
+\begin{itemize}
+{% for model in section.models %}
+\item \textbf{ {{- model.name -}} } (horizon={{ model.horizon }})
+{% endfor %}
+\end{itemize}
+{% endif %}
+
+{% if section.type == 'combination' and section.weights %}
+\begin{table}[H]
+\centering
+\begin{tabular}{lr}
+\toprule
+Model & Weight \\
+\midrule
+{% for name, weight in section.weights.items() %}
+{{ name }} & {{ "%.4f" | format(weight) }} \\
+{% endfor %}
+\bottomrule
+\end{tabular}
+\caption{Combination Weights}
+\end{table}
+{% endif %}
+
+{% if section.type == 'appendix' and section.execution_time %}
+\begin{table}[H]
+\centering
+\begin{tabular}{lr}
+\toprule
+Step & Time (s) \\
+\midrule
+{% for step, time in section.execution_time.items() %}
+{{ step }} & {{ "%.4f" | format(time) }} \\
+{% endfor %}
+\bottomrule
+\end{tabular}
+\caption{Execution Time}
+\end{table}
+{% endif %}
+
+{% endfor %}
+
+\end{document}

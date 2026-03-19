@@ -1,0 +1,73 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "forecastbox"
+dynamic = ["version"]
+description = "Forecast containers, evaluation metrics, and cross-validation for time series"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [
+    { name = "NodesEcon" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
+dependencies = [
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "matplotlib>=3.7",
+    "click>=8.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.4",
+    "pyright>=1.1",
+]
+
+[project.scripts]
+forecastbox = "forecastbox.cli.main:main"
+
+[tool.hatch.build.targets.sdist]
+exclude = [".venv/", "logs/", "tests/", "docs/"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["forecastbox"]
+
+[tool.hatch.version]
+path = "forecastbox/__version__.py"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+"forecastbox/nowcasting/dfm.py" = ["N803", "N806"]
+"tests/**/*.py" = ["N806", "N802", "N803"]
+
+[tool.coverage.run]
+omit = [
+    "forecastbox/auto/_adapters.py",
+]
+
+[tool.pyright]
+pythonVersion = "3.11"
+typeCheckingMode = "strict"

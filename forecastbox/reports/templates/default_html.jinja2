@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ metadata.title | default('Forecast Report') }}</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px;
+            background: #fafafa;
+            color: #2d2d2d;
+            line-height: 1.7;
+        }
+        header {
+            border-bottom: 3px solid #2E86AB;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        h1 { color: #1B3A5C; font-size: 2em; margin-bottom: 10px; }
+        h2 {
+            color: #1B3A5C;
+            margin-top: 35px;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #ddd;
+            font-size: 1.5em;
+        }
+        h3 { color: #2E86AB; margin-top: 20px; margin-bottom: 10px; }
+        .meta { color: #666; font-size: 0.9em; }
+        .meta span { margin-right: 20px; }
+        p { margin-bottom: 12px; }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 15px 0;
+            font-size: 0.95em;
+        }
+        th, td {
+            padding: 10px 15px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #1B3A5C;
+            color: white;
+            font-weight: 600;
+        }
+        tr:nth-child(even) { background-color: #f5f5f5; }
+        tr:hover { background-color: #e8f4f8; }
+        .plot-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .plot-container img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .metric-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+        .metric-card .value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #1B3A5C;
+        }
+        .metric-card .label {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 5px;
+        }
+        ul { padding-left: 20px; margin: 10px 0; }
+        li { margin-bottom: 5px; }
+        .section { margin-bottom: 35px; }
+        footer {
+            margin-top: 40px;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+            color: #999;
+            font-size: 0.8em;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>{{ metadata.title | default('Forecast Report') }}</h1>
+        <div class="meta">
+            {% if metadata.author %}<span>Author: {{ metadata.author }}</span>{% endif %}
+            {% if metadata.date %}<span>Date: {{ metadata.date }}</span>{% endif %}
+            <span>Template: {{ metadata.template | default('default') }}</span>
+        </div>
+    </header>
+
+    {% for section in sections %}
+    <div class="section" id="section-{{ section.type | default('unknown') }}">
+        <h2>{{ section.title | default('Section') }}</h2>
+
+        {% if section.text %}
+        <p>{{ section.text }}</p>
+        {% endif %}
+
+        {# Summary section: metrics grid #}
+        {% if section.type == 'summary' and section.key_metrics %}
+        <div class="metrics-grid">
+            {% for name, value in section.key_metrics.items() %}
+            <div class="metric-card">
+                <div class="value">{{ "%.4f" | format(value) }}</div>
+                <div class="label">{{ name | upper }}</div>
+            </div>
+            {% endfor %}
+            {% if section.total_time %}
+            <div class="metric-card">
+                <div class="value">{{ "%.2f" | format(section.total_time) }}s</div>
+                <div class="label">TOTAL TIME</div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {# Data section #}
+        {% if section.type == 'data' %}
+        <table>
+            <tr><th>Property</th><th>Value</th></tr>
+            <tr><td>Data Length</td><td>{{ section.data_length | default('N/A') }}</td></tr>
+            <tr><td>Forecast Horizon</td><td>{{ section.horizon | default('N/A') }}</td></tr>
+            {% if section.preprocess %}
+            <tr><td>Preprocessing</td><td>{{ section.preprocess | join(', ') }}</td></tr>
+            {% endif %}
+        </table>
+        {% endif %}
+
+        {# Models section #}
+        {% if section.type == 'models' and section.models %}
+        <table>
+            <tr><th>Model</th><th>Horizon</th><th>Intervals</th></tr>
+            {% for model in section.models %}
+            <tr>
+                <td><strong>{{ model.name }}</strong></td>
+                <td>{{ model.horizon }}</td>
+                <td>{{ 'Yes' if model.has_intervals else 'No' }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+
+        {# Forecasts section with plot #}
+        {% if section.type == 'forecasts' and section.plot_base64 %}
+        <div class="plot-container">
+            <img src="data:image/png;base64,{{ section.plot_base64 }}" alt="Forecast Comparison">
+        </div>
+        {% endif %}
+
+        {# Evaluation section #}
+        {% if section.type == 'evaluation' and section.evaluation %}
+        <table>
+            <tr>
+                <th>Model</th>
+                {% for col in section.evaluation.keys() %}
+                <th>{{ col | upper }}</th>
+                {% endfor %}
+            </tr>
+            {% if section.evaluation %}
+            {% set first_col = section.evaluation.keys() | list | first %}
+            {% if section.evaluation[first_col] is mapping %}
+            {% for row in section.evaluation[first_col].keys() %}
+            <tr>
+                <td>{{ row }}</td>
+                {% for col in section.evaluation.keys() %}
+                <td>
+                    {% if section.evaluation[col][row] is number %}
+                    {{ "%.4f" | format(section.evaluation[col][row]) }}
+                    {% else %}
+                    {{ section.evaluation[col][row] }}
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+            {% endif %}
+            {% endif %}
+        </table>
+        {% if section.best_model %}
+        <p><strong>Best Model:</strong> {{ section.best_model }}</p>
+        {% endif %}
+        {% endif %}
+
+        {# Combination section #}
+        {% if section.type == 'combination' and section.weights %}
+        <table>
+            <tr><th>Model</th><th>Weight</th></tr>
+            {% for name, weight in section.weights.items() %}
+            <tr><td>{{ name }}</td><td>{{ "%.4f" | format(weight) }}</td></tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+
+        {# Diagnostics section #}
+        {% if section.type == 'diagnostics' and section.diagnostics %}
+        {% for model_name, diag in section.diagnostics.items() %}
+        <h3>{{ model_name }}</h3>
+        <table>
+            <tr><th>Statistic</th><th>Value</th></tr>
+            {% for stat, value in diag.items() %}
+            <tr><td>{{ stat }}</td><td>{{ "%.4f" | format(value) }}</td></tr>
+            {% endfor %}
+        </table>
+        {% endfor %}
+        {% endif %}
+
+        {# Appendix section #}
+        {% if section.type == 'appendix' %}
+        {% if section.execution_time %}
+        <h3>Execution Time</h3>
+        <table>
+            <tr><th>Step</th><th>Time (s)</th></tr>
+            {% for step, time in section.execution_time.items() %}
+            <tr><td>{{ step }}</td><td>{{ "%.4f" | format(time) }}</td></tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    <footer>
+        Generated by forecastbox | {{ metadata.date | default('') }}
+    </footer>
+</body>
+</html>
