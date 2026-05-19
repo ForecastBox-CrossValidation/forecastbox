@@ -2,7 +2,7 @@
 
 ## Overview
 
-ForecastBox provides automatic model selection for several model families.
+forecastbox provides automatic model selection for several model families.
 
 ## AutoARIMA
 

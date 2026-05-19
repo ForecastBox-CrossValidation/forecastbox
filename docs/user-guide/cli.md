@@ -2,7 +2,7 @@
 
 ## Overview
 
-ForecastBox provides 5 CLI commands.
+forecastbox provides 5 CLI commands.
 
 ## forecast
 

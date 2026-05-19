@@ -1,101 +1,271 @@
-site_name: ForecastBox
-site_description: Forecast engine for the NodesEcon ecosystem
+site_name: forecastbox
+site_description: "Motor de previsao econometrica - AutoForecast, Combinacao, Nowcasting"
 site_url: https://nodesecon.github.io/forecastbox/
 repo_url: https://github.com/nodesecon/forecastbox
 repo_name: nodesecon/forecastbox
 
+copyright: Copyright &copy; 2024-2026 NodesEcon
+
 theme:
   name: material
   palette:
-    - scheme: default
-      primary: indigo
-      accent: indigo
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: amber
       toggle:
         icon: material/brightness-7
-        name: Switch to dark mode
-    - scheme: slate
-      primary: indigo
-      accent: indigo
+        name: Modo escuro
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: amber
       toggle:
         icon: material/brightness-4
-        name: Switch to light mode
+        name: Modo claro
+  font:
+    text: Roboto
+    code: Roboto Mono
   features:
+    - navigation.instant
+    - navigation.tracking
     - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.sections
     - navigation.expand
     - navigation.top
-    - search.suggest
+    - navigation.footer
+    - navigation.indexes
     - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - search.suggest
+    - search.highlight
+  icon:
+    repo: fontawesome/brands/github
+  custom_dir: docs/overrides
 
 plugins:
-  - search
+  - search:
+      lang: en
   - mkdocstrings:
       handlers:
         python:
-          paths: [.]
           options:
-            show_source: true
+            docstring_style: numpy
+            docstring_section_style: table
             show_root_heading: true
+            show_source: true
+            show_signature_annotations: true
+            separate_signature: true
+            merge_init_into_class: true
+            inherited_members: false
+            members_order: source
+            group_by_category: true
+            show_category_heading: true
+            show_if_no_docstring: false
+            annotations_path: brief
 
 markdown_extensions:
-  - pymdownx.highlight:
-      anchor_linenums: true
-  - pymdownx.superfences
-  - pymdownx.tabbed:
-      alternate_style: true
+  # Python Markdown
+  - abbr
   - admonition
-  - pymdownx.details
-  - pymdownx.arithmatex:
-      generic: true
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
   - toc:
       permalink: true
+      toc_depth: 3
+
+  # Python Markdown Extensions
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/nodesecon/forecastbox
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/forecastbox/
+
+validation:
+  links:
+    not_found: warn
+    anchors: warn
+    absolute_links: info
+    unrecognized_links: info
+  nav:
+    omitted_files: warn
+    not_found: warn
+    absolute_links: info
 
 extra_javascript:
   - javascripts/mathjax.js
-  - https://polyfill.io/v3/polyfill.min.js?features=es6
-  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+
+extra_css:
+  - stylesheets/extra.css
 
 nav:
   - Home: index.md
+
   - Getting Started:
-    - Installation: getting-started/installation.md
+    - getting-started/index.md
+    - Instalacao: getting-started/installation.md
     - Quickstart: getting-started/quickstart.md
-    - Concepts: getting-started/concepts.md
+    - Conceitos Fundamentais: getting-started/core-concepts.md
+    - Escolhendo o Metodo: getting-started/choosing-method.md
+
   - User Guide:
-    - Auto-Forecast: user-guide/auto-forecast.md
-    - Combination: user-guide/combination.md
-    - Evaluation: user-guide/evaluation.md
-    - Scenarios: user-guide/scenarios.md
-    - Nowcasting: user-guide/nowcasting.md
-    - Pipeline: user-guide/pipeline.md
-    - CLI: user-guide/cli.md
+    - user-guide/index.md
+    - Auto-Forecast:
+      - user-guide/auto-forecast/index.md
+      - AutoARIMA: user-guide/auto-forecast/auto-arima.md
+      - AutoETS: user-guide/auto-forecast/auto-ets.md
+      - AutoVAR: user-guide/auto-forecast/auto-var.md
+      - AutoSelect: user-guide/auto-forecast/auto-select.md
+      - ModelZoo: user-guide/auto-forecast/model-zoo.md
+    - Combinacao:
+      - user-guide/combination/index.md
+      - Media Simples: user-guide/combination/simple.md
+      - Pesos Fixos: user-guide/combination/weighted.md
+      - OLS: user-guide/combination/ols.md
+      - Stacking: user-guide/combination/stacking.md
+      - BMA: user-guide/combination/bma.md
+      - Time-Varying: user-guide/combination/time-varying.md
+      - Otima: user-guide/combination/optimal.md
+      - Escolhendo Metodo: user-guide/combination/choosing.md
+    - Avaliacao:
+      - user-guide/evaluation/index.md
+      - Metricas: user-guide/evaluation/metrics.md
+      - Diebold-Mariano: user-guide/evaluation/diebold-mariano.md
+      - Model Confidence Set: user-guide/evaluation/mcs.md
+      - Giacomini-White: user-guide/evaluation/giacomini-white.md
+      - Mincer-Zarnowitz: user-guide/evaluation/mincer-zarnowitz.md
+      - Encompassing: user-guide/evaluation/encompassing.md
+      - Cross-Validation: user-guide/evaluation/cross-validation.md
+    - Cenarios:
+      - user-guide/scenarios/index.md
+      - Previsao Condicional: user-guide/scenarios/conditional.md
+      - Scenario Builder: user-guide/scenarios/scenario-builder.md
+      - Monte Carlo: user-guide/scenarios/monte-carlo.md
+      - Fan Charts: user-guide/scenarios/fan-charts.md
+      - Stress Testing: user-guide/scenarios/stress-testing.md
+    - Nowcasting:
+      - user-guide/nowcasting/index.md
+      - DFM: user-guide/nowcasting/dfm.md
+      - Bridge Equations: user-guide/nowcasting/bridge.md
+      - MIDAS: user-guide/nowcasting/midas.md
+      - News Decomposition: user-guide/nowcasting/news.md
+      - Vintages: user-guide/nowcasting/vintages.md
+    - Pipeline:
+      - user-guide/pipeline/index.md
+      - Pipeline: user-guide/pipeline/pipeline.md
+      - Monitor: user-guide/pipeline/monitor.md
+    - Experiment: user-guide/experiment.md
+
+  - Theory:
+    - theory/combination-theory.md
+    - theory/evaluation-theory.md
+    - theory/mcs-theory.md
+    - theory/nowcasting-theory.md
+    - theory/midas-theory.md
+    - theory/conditional-theory.md
+    - theory/bma-theory.md
+    - theory/references.md
+
+  - Diagnostics:
+    - diagnostics/index.md
+    - Vies: diagnostics/bias.md
+    - Eficiencia: diagnostics/efficiency.md
+    - Racionalidade: diagnostics/rationality.md
+    - DM Test: diagnostics/dm-test.md
+    - MCS Diagnostic: diagnostics/mcs-diagnostic.md
+    - GW Test: diagnostics/gw-test.md
+    - Estabilidade de Pesos: diagnostics/weight-stability.md
+    - Encompassing Test: diagnostics/encompassing-test.md
+    - News Diagnostic: diagnostics/news-diagnostic.md
+    - Real-Time: diagnostics/real-time.md
+
+  - Tutorials:
+    - tutorials/index.md
+    - Fundamentos: tutorials/fundamentals.md
+    - Combinacao: tutorials/combination.md
+    - Avaliacao: tutorials/evaluation.md
+    - Cenarios: tutorials/scenarios.md
+    - Nowcasting: tutorials/nowcasting.md
+    - MIDAS: tutorials/midas.md
+    - Pipeline: tutorials/pipeline.md
+    - Workflow Completo: tutorials/complete-workflow.md
+
+  - Visualization:
+    - visualization/index.md
+    - Graficos de Previsao: visualization/forecast-plots.md
+    - Comparacao: visualization/comparison-plots.md
+    - Combinacao: visualization/combination-plots.md
+    - Avaliacao: visualization/evaluation-plots.md
+    - Nowcasting: visualization/nowcast-plots.md
+    - Pipeline: visualization/pipeline-plots.md
+    - Temas: visualization/themes.md
+
   - API Reference:
+    - api/index.md
     - Core: api/core.md
-    - Auto: api/auto.md
+    - Auto-Forecast: api/auto-forecast.md
     - Combination: api/combination.md
     - Evaluation: api/evaluation.md
-    - Metrics: api/metrics.md
     - Scenarios: api/scenarios.md
     - Nowcasting: api/nowcasting.md
     - Pipeline: api/pipeline.md
-    - Visualization: api/viz.md
+    - Diagnostics: api/diagnostics.md
+    - Visualization: api/visualization.md
     - Reports: api/reports.md
-    - CLI: api/cli.md
+    - Experiment: api/experiment.md
     - Datasets: api/datasets.md
-  - Examples:
-    - Basic Forecast: examples/basic_forecast.md
-    - Combination Comparison: examples/combination_comparison.md
-    - Nowcast GDP: examples/nowcast_gdp.md
-    - Scenario Analysis: examples/scenario_analysis.md
-    - Forecast Monitor: examples/forecast_monitor.md
-    - Full Experiment: examples/full_experiment.md
-  - Theory:
-    - AutoARIMA: theory/auto_arima.md
-    - Forecast Combination: theory/forecast_combination.md
-    - Diebold-Mariano Test: theory/diebold_mariano.md
-    - Model Confidence Set: theory/model_confidence_set.md
-    - MIDAS: theory/midas.md
-    - News Decomposition: theory/news_decomposition.md
-    - Bates-Granger: theory/bates_granger.md
-  - Contributing: contributing.md
-  - Changelog: changelog.md
+    - CLI: api/cli.md
+
+  - FAQ:
+    - faq/general.md
+    - faq/advanced.md
+    - faq/troubleshooting.md
+
+  - Benchmarks:
+    - benchmarks/index.md
+    - benchmarks/auto-forecast.md
+    - benchmarks/combination.md
+    - benchmarks/nowcasting.md
+    - benchmarks/comparison.md
+
+  - Contributing:
+    - How to Contribute: contributing/contributing.md
+    - Code of Conduct: contributing/code-of-conduct.md
+    - Changelog: contributing/changelog.md
+    - Roadmap: contributing/roadmap.md

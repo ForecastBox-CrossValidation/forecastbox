@@ -1,0 +1,5 @@
+"metric","value","model","variable","dataset"
+"MAE",0.4593125,"naive","gdp_growth","macro_brazil"
+"RMSE",0.52275495813048,"naive","gdp_growth","macro_brazil"
+"MAPE",2.61863314102776,"naive","gdp_growth","macro_brazil"
+"MASE",2.06889706288341,"naive","gdp_growth","macro_brazil"

@@ -35,6 +35,15 @@ dev = [
     "ruff>=0.4",
     "pyright>=1.1",
 ]
+docs = [
+    "mkdocs-material>=9.5",
+    "mkdocstrings[python]>=0.24",
+    "mkdocs-gen-files>=0.5",
+    "mkdocs-literate-nav>=0.6",
+    "mkdocs-section-index>=0.3",
+    "pymdown-extensions>=10.0",
+    "mkdocs-jupyter>=0.24",
+]
 
 [project.scripts]
 forecastbox = "forecastbox.cli.main:main"
