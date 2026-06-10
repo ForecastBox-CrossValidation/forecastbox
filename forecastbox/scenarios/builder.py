@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.axes import Axes
 from numpy.typing import NDArray
 
 if TYPE_CHECKING:
@@ -132,10 +133,10 @@ class ScenarioResults:
         self,
         variable: str,
         scenarios: list[str] | None = None,
-        ax: plt.Axes | None = None,
+        ax: Axes | None = None,
         title: str | None = None,
         show_intervals: bool = True,
-    ) -> plt.Axes:
+    ) -> Axes:
         """Plot all scenarios for a given variable.
 
         Parameters
@@ -157,10 +158,11 @@ class ScenarioResults:
             The matplotlib Axes.
         """
         if ax is None:
-            _, ax = plt.subplots(figsize=(12, 6))
+            _, ax = plt.subplots(figsize=(12, 6))  # type: ignore[reportUnknownMemberType]
 
         scenario_names = scenarios if scenarios is not None else list(self.scenarios.keys())
-        colors = plt.cm.tab10(np.linspace(0, 1, len(scenario_names)))
+        cmap = plt.get_cmap("tab10")
+        colors: NDArray[np.float64] = cmap(np.linspace(0, 1, len(scenario_names)))
 
         x = np.arange(1, self.steps + 1)
 
@@ -168,19 +170,19 @@ class ScenarioResults:
             fc = self.get(name, variable)
             color = colors[idx]
 
-            ax.plot(x, fc.point, "-o", color=color, label=name, linewidth=2, markersize=4)
+            ax.plot(x, fc.point, "-o", color=color, label=name, linewidth=2, markersize=4)  # type: ignore[reportUnknownMemberType]
 
             if show_intervals and fc.lower_80 is not None and fc.upper_80 is not None:
-                ax.fill_between(
+                ax.fill_between(  # type: ignore[reportUnknownMemberType]
                     x, fc.lower_80, fc.upper_80,
                     alpha=0.15, color=color,
                 )
 
-        ax.set_xlabel("Horizon")
-        ax.set_ylabel(variable)
-        ax.set_title(title or f"Scenario Comparison: {variable}")
-        ax.legend()
-        ax.grid(True, alpha=0.3)
+        ax.set_xlabel("Horizon")  # type: ignore[reportUnknownMemberType]
+        ax.set_ylabel(variable)  # type: ignore[reportUnknownMemberType]
+        ax.set_title(title or f"Scenario Comparison: {variable}")  # type: ignore[reportUnknownMemberType]
+        ax.legend()  # type: ignore[reportUnknownMemberType]
+        ax.grid(True, alpha=0.3)  # type: ignore[reportUnknownMemberType]
 
         return ax
 
@@ -188,8 +190,8 @@ class ScenarioResults:
         self,
         variable: str,
         scenario: str = "base",
-        ax: plt.Axes | None = None,
-    ) -> plt.Axes:
+        ax: Axes | None = None,
+    ) -> Axes:
         """Plot fan chart for a single scenario.
 
         Parameters
@@ -393,12 +395,15 @@ class ScenarioBuilder:
         rng = np.random.default_rng(seed)
 
         for name, spec in self._scenarios.items():
-            scenario_seed = rng.integers(0, 2**31)
+            scenario_seed = int(rng.integers(0, 2**31))  # type: ignore[reportUnknownArgumentType]
+            conditions: dict[str, list[float] | NDArray[np.float64]] | None = (
+                dict(spec.conditions) if spec.conditions else None
+            )
             results[name] = cf.forecast(
                 steps=steps,
-                conditions=spec.conditions if spec.conditions else None,
+                conditions=conditions,
                 n_draws=n_draws,
-                seed=int(scenario_seed),
+                seed=scenario_seed,
             )
 
         return ScenarioResults(

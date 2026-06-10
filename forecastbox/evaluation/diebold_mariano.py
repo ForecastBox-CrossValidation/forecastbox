@@ -20,7 +20,7 @@ from dataclasses import dataclass
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy import stats
+from scipy import stats  # type: ignore[reportMissingTypeStubs]
 
 from forecastbox.evaluation._hac import hac_variance
 
@@ -228,10 +228,10 @@ def diebold_mariano(
     df = n - 1
     if one_sided:
         # One-sided: H1 is that forecast 1 is better (d_bar < 0)
-        pvalue = float(stats.t.cdf(dm_stat, df=df))
+        pvalue = float(stats.t.cdf(dm_stat, df=df))  # type: ignore[reportUnknownMemberType]
     else:
         # Two-sided
-        pvalue = float(2.0 * stats.t.sf(abs(dm_stat), df=df))
+        pvalue = float(2.0 * stats.t.sf(abs(dm_stat), df=df))  # type: ignore[reportUnknownMemberType]
 
     return DMResult(
         statistic=dm_stat,

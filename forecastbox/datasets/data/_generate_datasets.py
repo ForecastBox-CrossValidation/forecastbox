@@ -289,8 +289,8 @@ def generate_interest_rates() -> None:
     for mat, base in zip(maturities, base_levels, strict=True):
         spread = base - 3.0
         noise = rng.normal(0, 0.1, n)
-        data[mat] = np.round(level + spread + noise, 3)
-        data[mat] = np.clip(data[mat], 0, 10).round(3)
+        rates = np.round(level + spread + noise, 3)
+        data[mat] = np.clip(rates, 0, 10).round(3)
 
     pd.DataFrame(data).to_csv(DATA_DIR / "interest_rates.csv", index=False)
 

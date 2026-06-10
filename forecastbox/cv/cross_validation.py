@@ -7,6 +7,7 @@ from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.axes import Axes
 import pandas as pd
 from numpy.typing import NDArray
 
@@ -43,7 +44,7 @@ class CVResults:
     def _compute_metrics(self) -> None:
         """Compute metrics by horizon and overall."""
         # Metrics by horizon
-        rows = []
+        rows: list[dict[str, float | int]] = []
         for h in range(self.horizon):
             h_errors = self.errors[:, h]
             valid = ~np.isnan(h_errors)
@@ -117,7 +118,7 @@ class CVResults:
             raise ValueError(msg)
         return self.metrics_overall[metric]
 
-    def plot_errors(self, ax: plt.Axes | None = None) -> plt.Axes:
+    def plot_errors(self, ax: Axes | None = None) -> Axes:
         """Plot metrics by horizon.
 
         Parameters
@@ -131,21 +132,21 @@ class CVResults:
             Matplotlib axes.
         """
         if ax is None:
-            _, ax = plt.subplots(figsize=(10, 5))
+            _, ax = plt.subplots(figsize=(10, 5))  # type: ignore[reportUnknownMemberType]
 
         h = self.metrics_by_horizon["horizon"]
-        ax.plot(h, self.metrics_by_horizon["mae"], "o-", label="MAE")
-        ax.plot(h, self.metrics_by_horizon["rmse"], "s-", label="RMSE")
-        ax.set_xlabel("Horizon")
-        ax.set_ylabel("Error")
-        ax.set_title("Forecast Error by Horizon")
-        ax.legend()
-        ax.grid(True, alpha=0.3)
+        ax.plot(h, self.metrics_by_horizon["mae"], "o-", label="MAE")  # type: ignore[reportUnknownMemberType]
+        ax.plot(h, self.metrics_by_horizon["rmse"], "s-", label="RMSE")  # type: ignore[reportUnknownMemberType]
+        ax.set_xlabel("Horizon")  # type: ignore[reportUnknownMemberType]
+        ax.set_ylabel("Error")  # type: ignore[reportUnknownMemberType]
+        ax.set_title("Forecast Error by Horizon")  # type: ignore[reportUnknownMemberType]
+        ax.legend()  # type: ignore[reportUnknownMemberType]
+        ax.grid(True, alpha=0.3)  # type: ignore[reportUnknownMemberType]
         return ax
 
     def plot_forecast_vs_actual(
-        self, fold: int | None = None, ax: plt.Axes | None = None
-    ) -> plt.Axes:
+        self, fold: int | None = None, ax: Axes | None = None
+    ) -> Axes:
         """Plot forecast vs actual for a specific fold or all folds.
 
         Parameters
@@ -161,7 +162,7 @@ class CVResults:
             Matplotlib axes.
         """
         if ax is None:
-            _, ax = plt.subplots(figsize=(10, 5))
+            _, ax = plt.subplots(figsize=(10, 5))  # type: ignore[reportUnknownMemberType]
 
         if fold is None:
             fold = self.n_folds - 1
@@ -170,13 +171,13 @@ class CVResults:
         act = self.actuals[fold]
         h_range = np.arange(1, len(fc) + 1)
 
-        ax.plot(h_range, act, "ko-", label="Actual", linewidth=2)
-        ax.plot(h_range, fc, "b--", label="Forecast", linewidth=1.5)
-        ax.set_xlabel("Horizon")
-        ax.set_ylabel("Value")
-        ax.set_title(f"Fold {fold + 1}: Forecast vs Actual")
-        ax.legend()
-        ax.grid(True, alpha=0.3)
+        ax.plot(h_range, act, "ko-", label="Actual", linewidth=2)  # type: ignore[reportUnknownMemberType]
+        ax.plot(h_range, fc, "b--", label="Forecast", linewidth=1.5)  # type: ignore[reportUnknownMemberType]
+        ax.set_xlabel("Horizon")  # type: ignore[reportUnknownMemberType]
+        ax.set_ylabel("Value")  # type: ignore[reportUnknownMemberType]
+        ax.set_title(f"Fold {fold + 1}: Forecast vs Actual")  # type: ignore[reportUnknownMemberType]
+        ax.legend()  # type: ignore[reportUnknownMemberType]
+        ax.grid(True, alpha=0.3)  # type: ignore[reportUnknownMemberType]
         return ax
 
 
@@ -243,14 +244,17 @@ def expanding_window_cv(
             break
 
         train = data.iloc[:train_end]
-        test = data.iloc[test_start:test_end].values.astype(np.float64)
+        test: NDArray[np.float64] = data.iloc[test_start:test_end].to_numpy(
+            dtype=np.float64
+        )
 
         # Get forecast
         result = model_fn(train)
+        forecast: NDArray[np.float64]
         if isinstance(result, np.ndarray):
-            forecast = result.astype(np.float64)
+            forecast = result.astype(np.float64)  # type: ignore[reportUnknownVariableType]
         elif hasattr(result, "forecast"):
-            fc_result = result.forecast(horizon)
+            fc_result: Any = result.forecast(horizon)
             forecast = np.asarray(fc_result, dtype=np.float64)
         else:
             msg = "model_fn must return ndarray or object with .forecast(h) method"

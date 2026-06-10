@@ -15,7 +15,7 @@ from dataclasses import dataclass
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy import stats
+from scipy import stats  # type: ignore[reportMissingTypeStubs]
 
 from forecastbox.evaluation._hac import newey_west
 
@@ -185,7 +185,7 @@ def giacomini_white(
     gw_stat = max(gw_stat, 0.0)  # ensure non-negative
 
     # p-value from chi-squared(q)
-    pvalue = float(1.0 - stats.chi2.cdf(gw_stat, df=q))
+    pvalue = float(1.0 - stats.chi2.cdf(gw_stat, df=q))  # type: ignore[reportUnknownMemberType]
 
     return GWResult(
         statistic=gw_stat,

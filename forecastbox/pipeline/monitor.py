@@ -8,9 +8,16 @@ from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
+from matplotlib.axes import Axes
 
 from forecastbox.pipeline.pipeline import ForecastPipeline
+
+
+def _rmse(x: npt.NDArray[np.float64]) -> float:
+    """Root mean squared value of an array (errors already centered)."""
+    return float(np.sqrt(np.mean(x**2)))
 
 
 @dataclass
@@ -31,7 +38,7 @@ class MonitorReport:
         Fraction of actuals within 95% prediction interval.
     """
 
-    overall_metrics: dict[str, float] = field(default_factory=dict)
+    overall_metrics: dict[str, float] = field(default_factory=lambda: {})
     rolling_rmse: pd.Series = field(default_factory=lambda: pd.Series(dtype=float))
     rolling_mae: pd.Series = field(default_factory=lambda: pd.Series(dtype=float))
     bias: float = 0.0
@@ -106,7 +113,7 @@ class ForecastMonitor:
             Series with DatetimeIndex and actual values.
         """
         for date, value in data.items():
-            self.add_actual(date, float(value))
+            self.add_actual(pd.Timestamp(date), float(value))  # type: ignore[reportArgumentType]
 
     def add_forecast(
         self,
@@ -169,8 +176,12 @@ class ForecastMonitor:
         if pairs.empty:
             return MonitorReport()
 
-        errors = pairs["error"].values.astype(np.float64)
-        actuals_arr = pairs["actual"].values.astype(np.float64)
+        errors: npt.NDArray[np.float64] = np.asarray(
+            pairs["error"].to_numpy(), dtype=np.float64
+        )
+        actuals_arr: npt.NDArray[np.float64] = np.asarray(
+            pairs["actual"].to_numpy(), dtype=np.float64
+        )
 
         # Overall metrics
         rmse = float(np.sqrt(np.mean(errors**2)))
@@ -195,9 +206,7 @@ class ForecastMonitor:
         window = min(12, len(errors))
         error_series = pd.Series(errors, index=pairs.index)
 
-        rolling_rmse = error_series.rolling(window).apply(
-            lambda x: float(np.sqrt(np.mean(x**2))), raw=True
-        ).dropna()
+        rolling_rmse = error_series.rolling(window).apply(_rmse, raw=True).dropna()
 
         rolling_mae = error_series.abs().rolling(window).mean().dropna()
 
@@ -241,14 +250,13 @@ class ForecastMonitor:
             return pd.Series(dtype=float)
 
         errors = pd.Series(
-            pairs["actual"].values - pairs["forecast"].values,
+            pairs["actual"].to_numpy(dtype=np.float64)
+            - pairs["forecast"].to_numpy(dtype=np.float64),
             index=pairs.index,
         )
 
         if metric == "rmse":
-            return errors.rolling(window).apply(
-                lambda x: float(np.sqrt(np.mean(x**2))), raw=True
-            ).dropna()
+            return errors.rolling(window).apply(_rmse, raw=True).dropna()
         elif metric == "mae":
             return errors.abs().rolling(window).mean().dropna()
         elif metric == "mape":
@@ -277,14 +285,13 @@ class ForecastMonitor:
             return pd.Series(dtype=float)
 
         errors = pd.Series(
-            pairs["actual"].values - pairs["forecast"].values,
+            pairs["actual"].to_numpy(dtype=np.float64)
+            - pairs["forecast"].to_numpy(dtype=np.float64),
             index=pairs.index,
         )
 
         if metric == "rmse":
-            return errors.expanding().apply(
-                lambda x: float(np.sqrt(np.mean(x**2))), raw=True
-            ).dropna()
+            return errors.expanding().apply(_rmse, raw=True).dropna()
         elif metric == "mae":
             return errors.abs().expanding().mean().dropna()
         else:
@@ -304,7 +311,8 @@ class ForecastMonitor:
             return pd.Series(dtype=float)
 
         errors = pd.Series(
-            pairs["actual"].values - pairs["forecast"].values,
+            pairs["actual"].to_numpy(dtype=np.float64)
+            - pairs["forecast"].to_numpy(dtype=np.float64),
             index=pairs.index,
         )
         return errors.expanding().mean().dropna()
@@ -334,7 +342,9 @@ class ForecastMonitor:
         if len(pairs) < window * 2:
             return False
 
-        errors = pairs["actual"].values - pairs["forecast"].values
+        errors = pairs["actual"].to_numpy(dtype=np.float64) - pairs[
+            "forecast"
+        ].to_numpy(dtype=np.float64)
 
         recent_rmse = float(np.sqrt(np.mean(errors[-window:] ** 2)))
         historical_rmse = float(np.sqrt(np.mean(errors[:-window] ** 2)))
@@ -344,7 +354,7 @@ class ForecastMonitor:
 
         return bool(recent_rmse > threshold * historical_rmse)
 
-    def plot_accuracy_evolution(self, metric: str = "rmse", ax: plt.Axes | None = None) -> plt.Axes:
+    def plot_accuracy_evolution(self, metric: str = "rmse", ax: Axes | None = None) -> Axes:
         """Plot accuracy metric evolution over time.
 
         Parameters
@@ -360,28 +370,30 @@ class ForecastMonitor:
             The matplotlib Axes object.
         """
         if ax is None:
-            _, ax = plt.subplots(figsize=(12, 6))
+            _, ax = plt.subplots(figsize=(12, 6))  # type: ignore[reportUnknownMemberType]
 
         rolling = self.rolling_accuracy(metric=metric)
         cumulative = self.cumulative_accuracy(metric=metric)
 
         if not rolling.empty:
-            ax.plot(rolling.index, rolling.values, label=f"Rolling {metric.upper()}", linewidth=2)
+            ax.plot(  # type: ignore[reportUnknownMemberType]
+                rolling.index, rolling.to_numpy(), label=f"Rolling {metric.upper()}", linewidth=2
+            )
         if not cumulative.empty:
-            ax.plot(
-                cumulative.index, cumulative.values,
+            ax.plot(  # type: ignore[reportUnknownMemberType]
+                cumulative.index, cumulative.to_numpy(),
                 label=f"Cumulative {metric.upper()}", linestyle="--", linewidth=1.5,
             )
 
-        ax.set_title(f"Accuracy Evolution ({metric.upper()})")
-        ax.set_xlabel("Date")
-        ax.set_ylabel(metric.upper())
-        ax.legend()
-        ax.grid(True, alpha=0.3)
+        ax.set_title(f"Accuracy Evolution ({metric.upper()})")  # type: ignore[reportUnknownMemberType]
+        ax.set_xlabel("Date")  # type: ignore[reportUnknownMemberType]
+        ax.set_ylabel(metric.upper())  # type: ignore[reportUnknownMemberType]
+        ax.legend()  # type: ignore[reportUnknownMemberType]
+        ax.grid(True, alpha=0.3)  # type: ignore[reportUnknownMemberType]
 
         return ax
 
-    def plot_forecast_vs_actual(self, ax: plt.Axes | None = None) -> plt.Axes:
+    def plot_forecast_vs_actual(self, ax: Axes | None = None) -> Axes:
         """Plot forecasts vs actual values.
 
         Parameters
@@ -395,27 +407,29 @@ class ForecastMonitor:
             The matplotlib Axes object.
         """
         if ax is None:
-            _, ax = plt.subplots(figsize=(12, 6))
+            _, ax = plt.subplots(figsize=(12, 6))  # type: ignore[reportUnknownMemberType]
 
         pairs = self._get_matched_pairs()
         if pairs.empty:
-            ax.text(0.5, 0.5, "No data", ha="center", va="center", transform=ax.transAxes)
+            ax.text(  # type: ignore[reportUnknownMemberType]
+                0.5, 0.5, "No data", ha="center", va="center", transform=ax.transAxes
+            )
             return ax
 
-        ax.plot(pairs.index, pairs["actual"], "ko-", label="Actual", linewidth=1.5)
-        ax.plot(pairs.index, pairs["forecast"], "b-", label="Forecast", linewidth=2)
+        ax.plot(pairs.index, pairs["actual"], "ko-", label="Actual", linewidth=1.5)  # type: ignore[reportUnknownMemberType]
+        ax.plot(pairs.index, pairs["forecast"], "b-", label="Forecast", linewidth=2)  # type: ignore[reportUnknownMemberType]
 
         if "lower_95" in pairs.columns and "upper_95" in pairs.columns:
             valid = pairs.dropna(subset=["lower_95", "upper_95"])
             if len(valid) > 0:
-                ax.fill_between(
+                ax.fill_between(  # type: ignore[reportUnknownMemberType]
                     valid.index, valid["lower_95"], valid["upper_95"],
                     alpha=0.15, color="blue", label="95% CI",
                 )
 
-        ax.set_title("Forecast vs Actual")
-        ax.legend()
-        ax.grid(True, alpha=0.3)
+        ax.set_title("Forecast vs Actual")  # type: ignore[reportUnknownMemberType]
+        ax.legend()  # type: ignore[reportUnknownMemberType]
+        ax.grid(True, alpha=0.3)  # type: ignore[reportUnknownMemberType]
 
         return ax
 

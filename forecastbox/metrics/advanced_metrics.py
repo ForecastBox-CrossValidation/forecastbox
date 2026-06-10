@@ -17,7 +17,7 @@ from collections.abc import Callable
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy import stats as scipy_stats
+from scipy import stats as scipy_stats  # type: ignore[reportMissingTypeStubs]
 
 
 def mfe(
@@ -261,7 +261,8 @@ def crps(
         ensemble = ensemble.reshape(1, -1)
         actual = actual.reshape(1)
 
-    n_obs, n_draws = ensemble.shape
+    n_obs: int = int(ensemble.shape[0])
+    n_draws: int = int(ensemble.shape[1])
 
     if len(actual) != n_obs:
         msg = f"ensemble has {n_obs} rows but actual has {len(actual)} elements"
@@ -269,14 +270,14 @@ def crps(
 
     total_crps = 0.0
     for t in range(n_obs):
-        y = actual[t]
-        x = np.sort(ensemble[t])  # sorted draws
+        y: np.float64 = actual[t]
+        x: NDArray[np.float64] = np.sort(ensemble[t])  # sorted draws
 
         # Term 1: (1/M) * sum|x_m - y|
         term1 = float(np.mean(np.abs(x - y)))
 
         # Term 2: (1/M^2) * sum_m x_m * (2m - M - 1)  (efficient formula)
-        m_indices = np.arange(1, n_draws + 1)  # 1-based
+        m_indices: NDArray[np.int_] = np.arange(1, n_draws + 1)  # 1-based
         term2 = float(np.sum(x * (2.0 * m_indices - n_draws - 1.0))) / (n_draws * n_draws)
 
         total_crps += term1 - term2
@@ -325,8 +326,8 @@ def crps_gaussian(
     z = (actual - mean) / std
 
     # CRPS = sigma * [z * (2*Phi(z) - 1) + 2*phi(z) - 1/sqrt(pi)]
-    phi_z = scipy_stats.norm.pdf(z)
-    cdf_z = scipy_stats.norm.cdf(z)
+    phi_z = scipy_stats.norm.pdf(z)  # type: ignore[reportUnknownMemberType]
+    cdf_z = scipy_stats.norm.cdf(z)  # type: ignore[reportUnknownMemberType]
 
     crps_values = std * (
         z * (2.0 * cdf_z - 1.0) + 2.0 * phi_z - 1.0 / math.sqrt(math.pi)

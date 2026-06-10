@@ -47,12 +47,12 @@ class PipelineResults:
         Additional metadata from pipeline execution.
     """
 
-    forecasts: dict[str, Forecast] = field(default_factory=dict)
+    forecasts: dict[str, Forecast] = field(default_factory=lambda: {})
     combination: Forecast | None = None
     evaluation: pd.DataFrame = field(default_factory=lambda: pd.DataFrame())
-    cv_results: dict[str, Any] = field(default_factory=dict)
-    execution_time: dict[str, float] = field(default_factory=dict)
-    metadata: dict[str, Any] = field(default_factory=dict)
+    cv_results: dict[str, Any] = field(default_factory=lambda: {})
+    execution_time: dict[str, float] = field(default_factory=lambda: {})
+    metadata: dict[str, Any] = field(default_factory=lambda: {})
 
     def summary(self) -> str:
         """Generate formatted summary of pipeline results.
@@ -180,7 +180,8 @@ class PipelineResults:
 
 def _preprocess_log(data: pd.Series) -> pd.Series:
     """Apply log transformation."""
-    return np.log(data.clip(lower=1e-10))
+    clipped = data.clip(lower=1e-10)
+    return pd.Series(np.log(clipped.to_numpy(dtype=np.float64)), index=data.index, name=data.name)
 
 
 def _preprocess_diff(data: pd.Series) -> pd.Series:
@@ -196,9 +197,10 @@ def _preprocess_seasonal_diff(data: pd.Series, period: int = 12) -> pd.Series:
 def _preprocess_detrend(data: pd.Series) -> pd.Series:
     """Remove linear trend."""
     x = np.arange(len(data), dtype=np.float64)
-    coeffs = np.polyfit(x, data.values.astype(np.float64), 1)
+    values = data.to_numpy(dtype=np.float64)
+    coeffs = np.polyfit(x, values, 1)
     trend = np.polyval(coeffs, x)
-    detrended = data.values.astype(np.float64) - trend
+    detrended = values - trend
     return pd.Series(detrended, index=data.index, name=data.name)
 
 
@@ -319,7 +321,7 @@ class ForecastPipeline:
                     f"Specify 'target' parameter. Available: {list(raw.columns)}"
                 )
                 raise ValueError(msg)
-        elif isinstance(raw, pd.Series):
+        elif isinstance(raw, pd.Series):  # type: ignore[reportUnnecessaryIsInstance]
             return raw.dropna()
         else:
             msg = f"data_source must return DataFrame or Series, got {type(raw).__name__}"
@@ -352,7 +354,9 @@ class ForecastPipeline:
                 "mean": float(data.mean()),
                 "std": float(data.std()),
                 "last_values": data.tail(self.horizon).values.copy(),
-                "trend": float(np.polyfit(np.arange(len(data)), data.values, 1)[0]),
+                "trend": float(
+                    np.polyfit(np.arange(len(data)), data.to_numpy(dtype=np.float64), 1)[0]
+                ),
                 "rng_state": rng.integers(0, 10000),
             }
             fitted[model_name] = model_info
@@ -441,7 +445,7 @@ class ForecastPipeline:
             row: dict[str, Any] = {"model": model_name}
 
             # Compute basic metrics on the point forecast
-            if fc.point is not None and len(fc.point) > 0:
+            if len(fc.point) > 0:
                 for metric_name in self.evaluation:
                     if metric_name == "rmse":
                         # RMSE relative to zero (as a proxy without actuals)
@@ -479,7 +483,7 @@ class ForecastPipeline:
                 "initial_window": initial,
                 "horizon": self.horizon,
                 "n_folds": max(1, (len(data) - initial) // max(1, self.horizon)),
-                "mean_rmse": float(np.std(data.values) * 0.5),  # placeholder
+                "mean_rmse": float(np.std(data.to_numpy(dtype=np.float64)) * 0.5),  # placeholder
             }
 
         return cv_results

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import Any
 
 import pandas as pd
 
@@ -114,7 +115,7 @@ class DataVintage:
             Series indexed by release dates with values for the given period.
         """
         ts_period = pd.Timestamp(period)
-        values = {}
+        values: dict[date, Any] = {}
         for rd in self.release_dates:
             v = self.vintages[rd]
             if ts_period in v.index:

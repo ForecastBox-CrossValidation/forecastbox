@@ -8,6 +8,7 @@ from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.axes import Axes
 
 
 @dataclass
@@ -40,13 +41,19 @@ class NewsResult:
     total_revision: float
     old_nowcast: float
     new_nowcast: float
-    news: dict[str, float] = field(default_factory=dict)
-    weights: dict[str, float] = field(default_factory=dict)
-    contributions: dict[str, float] = field(default_factory=dict)
-    released_data: dict[str, float] = field(default_factory=dict)
-    expected_data: dict[str, float] = field(default_factory=dict)
+    news: dict[str, float] = field(default_factory=dict[str, float])
+    weights: dict[str, float] = field(default_factory=dict[str, float])
+    contributions: dict[str, float] = field(
+        default_factory=dict[str, float]
+    )
+    released_data: dict[str, float] = field(
+        default_factory=dict[str, float]
+    )
+    expected_data: dict[str, float] = field(
+        default_factory=dict[str, float]
+    )
 
-    def plot_contributions(self, ax: plt.Axes | None = None) -> plt.Axes:
+    def plot_contributions(self, ax: Axes | None = None) -> Axes:
         """Plot bar chart of individual contributions.
 
         Parameters
@@ -60,10 +67,10 @@ class NewsResult:
             The matplotlib Axes object.
         """
         if ax is None:
-            _, ax = plt.subplots(figsize=(10, 6))
+            _fig, ax = plt.subplots(figsize=(10, 6))  # type: ignore[reportUnknownMemberType]
 
         if not self.contributions:
-            ax.text(
+            ax.text(  # type: ignore[reportUnknownMemberType]
                 0.5,
                 0.5,
                 "No contributions",
@@ -78,17 +85,17 @@ class NewsResult:
 
         colors = ["green" if v >= 0 else "red" for v in values]
 
-        ax.barh(indicators, values, color=colors, alpha=0.7, edgecolor="black")
-        ax.set_xlabel("Contribution to Nowcast Revision")
-        ax.set_title(
+        ax.barh(indicators, values, color=colors, alpha=0.7, edgecolor="black")  # type: ignore[reportUnknownMemberType]
+        ax.set_xlabel("Contribution to Nowcast Revision")  # type: ignore[reportUnknownMemberType]
+        ax.set_title(  # type: ignore[reportUnknownMemberType]
             f"News Decomposition (Total Revision: {self.total_revision:.4f})"
         )
-        ax.axvline(x=0, color="black", linewidth=0.8)
-        ax.grid(True, alpha=0.3, axis="x")
+        ax.axvline(x=0, color="black", linewidth=0.8)  # type: ignore[reportUnknownMemberType]
+        ax.grid(True, alpha=0.3, axis="x")  # type: ignore[reportUnknownMemberType]
 
         return ax
 
-    def plot_waterfall(self, ax: plt.Axes | None = None) -> plt.Axes:
+    def plot_waterfall(self, ax: Axes | None = None) -> Axes:
         """Plot waterfall chart: old_nowcast + contributions = new_nowcast.
 
         Parameters
@@ -102,7 +109,7 @@ class NewsResult:
             The matplotlib Axes object.
         """
         if ax is None:
-            _, ax = plt.subplots(figsize=(12, 6))
+            _fig, ax = plt.subplots(figsize=(12, 6))  # type: ignore[reportUnknownMemberType]
 
         # Build waterfall data
         labels: list[str] = ["Old Nowcast"]
@@ -142,7 +149,7 @@ class NewsResult:
         for i in range(n):
             if i == 0 or i == n - 1:
                 # Full bars for start and end
-                ax.bar(
+                ax.bar(  # type: ignore[reportUnknownMemberType]
                     x_pos[i],
                     values[i],
                     bottom=0,
@@ -153,7 +160,7 @@ class NewsResult:
                 )
             else:
                 # Incremental bars
-                ax.bar(
+                ax.bar(  # type: ignore[reportUnknownMemberType]
                     x_pos[i],
                     values[i],
                     bottom=bottoms[i],
@@ -166,7 +173,7 @@ class NewsResult:
         # Connect bars with lines
         for i in range(n - 1):
             level = values[0] if i == 0 else bottoms[i] + values[i]
-            ax.plot(
+            ax.plot(  # type: ignore[reportUnknownMemberType]
                 [x_pos[i] + 0.4, x_pos[i + 1] - 0.4],
                 [level, level],
                 "k--",
@@ -174,11 +181,11 @@ class NewsResult:
                 alpha=0.5,
             )
 
-        ax.set_xticks(x_pos)
-        ax.set_xticklabels(labels, rotation=45, ha="right")
-        ax.set_ylabel("Nowcast Value")
-        ax.set_title("Nowcast Revision Waterfall")
-        ax.grid(True, alpha=0.3, axis="y")
+        ax.set_xticks(x_pos)  # type: ignore[reportUnknownMemberType]
+        ax.set_xticklabels(labels, rotation=45, ha="right")  # type: ignore[reportUnknownMemberType]
+        ax.set_ylabel("Nowcast Value")  # type: ignore[reportUnknownMemberType]
+        ax.set_title("Nowcast Revision Waterfall")  # type: ignore[reportUnknownMemberType]
+        ax.grid(True, alpha=0.3, axis="y")  # type: ignore[reportUnknownMemberType]
 
         plt.tight_layout()
         return ax
@@ -298,12 +305,13 @@ class NewsDecomposition:
         """
         news: dict[str, float] = {}
 
-        for var in self.nowcaster._var_names:
+        var_names: list[str] = list(self.nowcaster._var_names)
+        for var in var_names:
             if var not in old_data.columns or var not in new_data.columns:
                 continue
 
-            old_series = old_data[var].dropna()
-            new_series = new_data[var].dropna()
+            old_series: pd.Series[Any] = old_data[var].dropna()
+            new_series: pd.Series[Any] = new_data[var].dropna()
 
             # Find newly available observations
             if len(new_series) > len(old_series):
@@ -493,9 +501,9 @@ class NewsDecomposition:
 
         if target is None:
             if self.nowcaster._quarterly_vars:
-                target = self.nowcaster._quarterly_vars[0]
+                target = str(self.nowcaster._quarterly_vars[0])
             else:
-                target = self.nowcaster._var_names[0]
+                target = str(self.nowcaster._var_names[0])
 
         # Save current state
         original_data = self.nowcaster._data

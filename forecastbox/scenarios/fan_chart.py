@@ -13,6 +13,7 @@ from __future__ import annotations
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.axes import Axes
 from numpy.typing import NDArray
 
 _DEFAULT_QUANTILES = [0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90]
@@ -138,7 +139,7 @@ class FanChart:
         FanChart
             Fan chart with Gaussian quantiles.
         """
-        from scipy.stats import norm
+        from scipy.stats import norm  # type: ignore[reportMissingTypeStubs]
 
         mean = np.asarray(mean, dtype=np.float64)
         std = np.asarray(std, dtype=np.float64)
@@ -147,7 +148,7 @@ class FanChart:
 
         quantiles: dict[float, NDArray[np.float64]] = {}
         for q in levels:
-            z = norm.ppf(q)
+            z = float(norm.ppf(q))  # type: ignore[reportUnknownMemberType]
             quantiles[q] = mean + std * z
 
         # Median = mean for Gaussian
@@ -157,13 +158,13 @@ class FanChart:
 
     def plot(
         self,
-        ax: plt.Axes | None = None,
+        ax: Axes | None = None,
         title: str | None = None,
         color: str = "steelblue",
         alpha_range: tuple[float, float] = (0.15, 0.5),
         history_periods: int = 36,
         show_median: bool = True,
-    ) -> plt.Axes:
+    ) -> Axes:
         """Plot fan chart with colored probability bands.
 
         Parameters
@@ -188,7 +189,7 @@ class FanChart:
             The matplotlib Axes.
         """
         if ax is None:
-            _, ax = plt.subplots(figsize=(12, 6))
+            _, ax = plt.subplots(figsize=(12, 6))  # type: ignore[reportUnknownMemberType]
 
         h = self._steps
 
@@ -204,7 +205,7 @@ class FanChart:
             else:
                 x_hist = np.arange(-n_hist, 0)
                 hist_data = self.history[-n_hist:]
-            ax.plot(x_hist, hist_data, "k-", linewidth=1.5, label="History")
+            ax.plot(x_hist, hist_data, "k-", linewidth=1.5, label="History")  # type: ignore[reportUnknownMemberType]
 
         # Determine available band pairs
         available_pairs: list[tuple[float, float]] = []
@@ -228,7 +229,7 @@ class FanChart:
                 if band_idx == 0 or band_idx == n_bands - 1
                 else None
             )
-            ax.fill_between(
+            ax.fill_between(  # type: ignore[reportUnknownMemberType]
                 x_forecast,
                 lower,
                 upper,
@@ -239,13 +240,13 @@ class FanChart:
 
         # Plot median
         if show_median:
-            ax.plot(
+            ax.plot(  # type: ignore[reportUnknownMemberType]
                 x_forecast, self.median, "-", color=color, linewidth=2, label="Median"
             )
 
-        ax.set_title(title or "Fan Chart Forecast")
-        ax.legend(loc="best")
-        ax.grid(True, alpha=0.3)
+        ax.set_title(title or "Fan Chart Forecast")  # type: ignore[reportUnknownMemberType]
+        ax.legend(loc="best")  # type: ignore[reportUnknownMemberType]
+        ax.grid(True, alpha=0.3)  # type: ignore[reportUnknownMemberType]
 
         return ax
 

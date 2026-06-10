@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 
@@ -11,14 +11,14 @@ import numpy as np
 class _NumpyEncoder(json.JSONEncoder):
     """JSON encoder that handles NumPy types."""
 
-    def default(self, obj: Any) -> Any:
-        if isinstance(obj, (np.integer,)):
-            return int(obj)
-        elif isinstance(obj, (np.floating,)):
-            return float(obj)
-        elif isinstance(obj, np.ndarray):
-            return obj.tolist()
-        return super().default(obj)
+    def default(self, o: Any) -> Any:
+        if isinstance(o, np.integer):
+            return int(o)  # type: ignore[reportUnknownArgumentType]
+        elif isinstance(o, np.floating):
+            return float(o)  # type: ignore[reportUnknownArgumentType]
+        elif isinstance(o, np.ndarray):
+            return o.tolist()
+        return super().default(o)
 
 
 class JSONTransformer:
@@ -67,11 +67,14 @@ class JSONTransformer:
                 # Keep but truncate for readability in JSON
                 clean[key] = value[:100] + "..." if value and len(value) > 100 else value
             elif isinstance(value, dict):
-                clean[key] = self._clean_dict(value)
+                clean[key] = self._clean_dict(cast("dict[str, Any]", value))
             elif isinstance(value, list):
+                value_list = cast("list[Any]", value)
                 clean[key] = [
-                    self._clean_dict(item) if isinstance(item, dict) else item
-                    for item in value
+                    self._clean_dict(cast("dict[str, Any]", item))
+                    if isinstance(item, dict)
+                    else item
+                    for item in value_list
                 ]
             elif isinstance(value, (str, int, float, bool, type(None))):
                 clean[key] = value
@@ -81,14 +84,14 @@ class JSONTransformer:
                 clean[key] = str(value)
         return clean
 
-    def _clean_dict(self, d: dict[str, Any]) -> dict[str, Any]:
+    def _clean_dict(self, d: dict[Any, Any]) -> dict[str, Any]:
         """Recursively clean dict for JSON serialization."""
-        clean: dict[str, Any] = {}
+        clean: dict[Any, Any] = {}
         for key, value in d.items():
             # Ensure key is JSON-serializable
-            str_key = str(key) if not isinstance(key, (str, int, float, bool)) else key
+            str_key = key if isinstance(key, (str, int, float, bool)) else str(key)
             if isinstance(value, dict):
-                clean[str_key] = self._clean_dict(value)
+                clean[str_key] = self._clean_dict(cast("dict[str, Any]", value))
             elif isinstance(value, np.ndarray):
                 clean[str_key] = value.tolist()
             elif isinstance(value, (str, int, float, bool, type(None))):

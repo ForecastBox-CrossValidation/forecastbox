@@ -142,7 +142,7 @@ class SimpleVAR:
         # OLS: beta = (X'X)^{-1} X'Y
         xtx = x_mat.T @ x_mat
         xty = x_mat.T @ y_mat
-        beta = np.linalg.solve(xtx, xty)  # (kp+1, k)
+        beta: NDArray[np.float64] = np.linalg.solve(xtx, xty).astype(np.float64)  # (kp+1, k)
 
         # Extract coefficients
         self._coef = []

@@ -15,7 +15,7 @@ from dataclasses import dataclass
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy import stats
+from scipy import stats  # type: ignore[reportMissingTypeStubs]
 
 from forecastbox.evaluation._hac import newey_west
 
@@ -89,10 +89,10 @@ class MZResult:
             "-" * 60,
             f"{'alpha':<15} {self.alpha:>10.4f} {self.alpha_se:>10.4f} "
             f"{self.alpha_tstat:>10.3f}"
-            f" {float(2 * stats.t.sf(abs(self.alpha_tstat), df=self.T - 2)):>10.4f}",
+            f" {float(2 * stats.t.sf(abs(self.alpha_tstat), df=self.T - 2)):>10.4f}",  # type: ignore[reportUnknownMemberType]
             f"{'beta':<15} {self.beta:>10.4f} {self.beta_se:>10.4f} "
             f"{self.beta_tstat:>10.3f}"
-            f" {float(2 * stats.t.sf(abs(self.beta_tstat), df=self.T - 2)):>10.4f}",
+            f" {float(2 * stats.t.sf(abs(self.beta_tstat), df=self.T - 2)):>10.4f}",  # type: ignore[reportUnknownMemberType]
             "-" * 60,
             f"R-squared: {self.r_squared:.4f}",
             f"Joint test (alpha=0, beta=1): F={self.f_statistic:.3f}, p={self.pvalue:.4f}",
@@ -210,7 +210,7 @@ def mincer_zarnowitz(
     f_statistic = max(f_statistic, 0.0)
 
     # p-value from F(2, n-2) distribution
-    pvalue = float(1.0 - stats.f.cdf(f_statistic, dfn=2, dfd=n - 2))
+    pvalue = float(1.0 - stats.f.cdf(f_statistic, dfn=2, dfd=n - 2))  # type: ignore[reportUnknownMemberType]
 
     return MZResult(
         alpha=alpha_hat,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 
 # NodesEcon color palette
 NODESECON_COLORS: dict[str, str] = {
@@ -43,7 +44,7 @@ def set_nodesecon_style() -> None:
             "axes.edgecolor": "#CCCCCC",
             "axes.linewidth": 0.8,
             "axes.grid": True,
-            "axes.prop_cycle": plt.cycler("color", NODESECON_PALETTE),
+            "axes.prop_cycle": plt.cycler("color", NODESECON_PALETTE),  # type: ignore[reportPrivateImportUsage]
             "grid.color": "#E0E0E0",
             "grid.alpha": 0.5,
             "grid.linewidth": 0.5,
@@ -87,12 +88,12 @@ def get_color_palette(n: int) -> list[str]:
 
 
 def format_axis(
-    ax: plt.Axes,
+    ax: Axes,
     title: str | None = None,
     xlabel: str | None = None,
     ylabel: str | None = None,
     legend: bool = True,
-) -> plt.Axes:
+) -> Axes:
     """Apply standard formatting to an axis.
 
     Parameters
@@ -114,15 +115,15 @@ def format_axis(
         Formatted axes.
     """
     if title:
-        ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
+        ax.set_title(title, fontsize=14, fontweight="bold", pad=12)  # type: ignore[reportUnknownMemberType]
     if xlabel:
-        ax.set_xlabel(xlabel, fontsize=12)
+        ax.set_xlabel(xlabel, fontsize=12)  # type: ignore[reportUnknownMemberType]
     if ylabel:
-        ax.set_ylabel(ylabel, fontsize=12)
+        ax.set_ylabel(ylabel, fontsize=12)  # type: ignore[reportUnknownMemberType]
     if legend and ax.get_legend_handles_labels()[1]:
-        ax.legend(framealpha=0.9, edgecolor="#CCCCCC")
+        ax.legend(framealpha=0.9, edgecolor="#CCCCCC")  # type: ignore[reportUnknownMemberType]
 
-    ax.grid(True, alpha=0.3, linewidth=0.5)
+    ax.grid(True, alpha=0.3, linewidth=0.5)  # type: ignore[reportUnknownMemberType]
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 

@@ -399,7 +399,7 @@ class MonteCarlo:
         if isinstance(variable, int):
             return variable
 
-        if isinstance(variable, str) and hasattr(self.model, "var_names"):
+        if hasattr(self.model, "var_names"):
             var_names = self.model.var_names
             if variable in var_names:
                 return var_names.index(variable)

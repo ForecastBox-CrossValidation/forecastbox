@@ -15,7 +15,7 @@ from dataclasses import dataclass
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy import stats
+from scipy import stats  # type: ignore[reportMissingTypeStubs]
 
 from forecastbox.evaluation._hac import hac_variance
 
@@ -188,7 +188,7 @@ def encompassing_test(
     t_stat = lambda_hat / lambda_se if lambda_se > 0 else 0.0
 
     # p-value from t(n-1)
-    pvalue = float(2.0 * stats.t.sf(abs(t_stat), df=n - 1))
+    pvalue = float(2.0 * stats.t.sf(abs(t_stat), df=n - 1))  # type: ignore[reportUnknownMemberType]
 
     # Determine encompassing conclusions
     # Test lambda = 0 (f2 encompasses f1)
@@ -197,7 +197,7 @@ def encompassing_test(
     # Test lambda = 1 (f1 encompasses f2)
     if lambda_se > 0:
         t_stat_1 = (lambda_hat - 1.0) / lambda_se
-        pvalue_1 = float(2.0 * stats.t.sf(abs(t_stat_1), df=n - 1))
+        pvalue_1 = float(2.0 * stats.t.sf(abs(t_stat_1), df=n - 1))  # type: ignore[reportUnknownMemberType]
         f1_encompasses_f2 = pvalue_1 >= alpha  # cannot reject lambda=1
     else:
         f1_encompasses_f2 = False

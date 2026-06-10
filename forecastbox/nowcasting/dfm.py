@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -49,9 +49,9 @@ class KalmanBoxAdapter:
         try:
             from kalmanbox import DFM, KalmanFilter, RTSSmoother  # type: ignore[import-untyped]
 
-            self._kf_cls = KalmanFilter
-            self._smoother_cls = RTSSmoother
-            self._dfm_cls = DFM
+            self._kf_cls: Any = KalmanFilter
+            self._smoother_cls: Any = RTSSmoother
+            self._dfm_cls: Any = DFM
             self._available = True
         except ImportError:
             self._available = False
@@ -98,7 +98,7 @@ class KalmanBoxAdapter:
         KalmanResult
             Filtered state estimates and covariances.
         """
-        n_t, n_obs = y.shape
+        n_t = y.shape[0]
         state_dim = T.shape[0]
 
         filtered_state = np.zeros((n_t, state_dim))
@@ -106,12 +106,12 @@ class KalmanBoxAdapter:
         log_lik = 0.0
 
         a = a0.copy()
-        P = P0.copy()
+        p_cov: NDArray[np.float64] = P0.copy()
 
         for t in range(n_t):
             # Prediction step
             a_pred = T @ a
-            P_pred = T @ P @ T.T + Q
+            P_pred = T @ p_cov @ T.T + Q
 
             # Get Z for this time step
             Z_t = Z[t] if Z.ndim == 3 else Z
@@ -139,7 +139,7 @@ class KalmanBoxAdapter:
 
                 # Update
                 a = a_pred + K @ v
-                P = P_pred - K @ Z_obs @ P_pred
+                p_cov = P_pred - K @ Z_obs @ P_pred
 
                 # Log-likelihood contribution
                 sign, logdet = np.linalg.slogdet(F)
@@ -149,10 +149,10 @@ class KalmanBoxAdapter:
                     )
             else:
                 a = a_pred
-                P = P_pred
+                p_cov = P_pred
 
             filtered_state[t] = a
-            filtered_cov[t] = P
+            filtered_cov[t] = p_cov
 
         return KalmanResult(
             filtered_state=filtered_state,
@@ -191,18 +191,19 @@ class KalmanBoxAdapter:
 
         # Backward pass (RTS smoother)
         for t in range(n_t - 2, -1, -1):
-            a_filt = result.filtered_state[t]
-            P_filt = result.filtered_cov[t]
+            a_filt: NDArray[np.float64] = result.filtered_state[t]
+            P_filt: NDArray[np.float64] = result.filtered_cov[t]
 
             a_pred = T @ a_filt
             P_pred = T @ P_filt @ T.T + Q
 
+            P_pred_inv: NDArray[np.floating[Any]]
             try:
                 P_pred_inv = np.linalg.inv(P_pred)
             except np.linalg.LinAlgError:
                 P_pred_inv = np.linalg.pinv(P_pred)
 
-            J = P_filt @ T.T @ P_pred_inv
+            J: NDArray[np.floating[Any]] = P_filt @ T.T @ P_pred_inv
 
             smoothed_state[t] = a_filt + J @ (smoothed_state[t + 1] - a_pred)
             smoothed_cov[t] = P_filt + J @ (smoothed_cov[t + 1] - P_pred) @ J.T
@@ -500,12 +501,12 @@ class DFMNowcaster:
         self._Lambda = eigenvectors[:, idx].astype(np.float64)
 
         # Initialize A as small diagonal
-        self._A = np.zeros((nf, nf * self.factor_lags))
+        self._A = np.zeros((nf, nf * self.factor_lags))  # type: ignore[reportConstantRedefinition]
         self._A[:, :nf] = 0.5 * np.eye(nf)
 
         # Initialize Q and R
-        self._Q = np.eye(nf) * 0.1
-        self._R = np.eye(n_obs) * 1.0
+        self._Q = np.eye(nf) * 0.1  # type: ignore[reportConstantRedefinition]
+        self._R = np.eye(n_obs) * 1.0  # type: ignore[reportConstantRedefinition]
 
         # EM iterations
         prev_ll = -np.inf
@@ -545,9 +546,12 @@ class DFMNowcaster:
             sum_ff = np.zeros((n_obs, nf, nf))
 
             for t in range(n_t):
-                f_t = smoothed[t, :nf]
-                P_t = smoothed_cov_all[t, :nf, :nf]  # type: ignore[index]
-                ff = np.outer(f_t, f_t) + P_t
+                f_t: NDArray[np.float64] = smoothed[t, :nf]
+                P_t: NDArray[np.float64] = smoothed_cov_all[t, :nf, :nf]  # type: ignore[index]
+                outer_ft = cast("NDArray[np.float64]", np.outer(f_t, f_t))
+                ff: NDArray[np.float64] = cast(
+                    "NDArray[np.float64]", outer_ft + P_t
+                )
 
                 for i in range(n_obs):
                     if not miss_mask[t, i]:
@@ -555,10 +559,12 @@ class DFMNowcaster:
                         sum_ff[i] += ff
 
             for i in range(n_obs):
+                sum_ff_i: NDArray[np.float64] = sum_ff[i]
+                sum_ff_inv: NDArray[np.floating[Any]]
                 try:
-                    sum_ff_inv = np.linalg.inv(sum_ff[i])
+                    sum_ff_inv = np.linalg.inv(sum_ff_i)
                 except np.linalg.LinAlgError:
-                    sum_ff_inv = np.linalg.pinv(sum_ff[i])
+                    sum_ff_inv = np.linalg.pinv(sum_ff_i)
                 self._Lambda[i] = sum_xf[i] @ sum_ff_inv  # type: ignore[index]
 
             self._Lambda = self._Lambda.astype(np.float64)  # type: ignore[union-attr]
@@ -580,7 +586,7 @@ class DFMNowcaster:
                 else:
                     diag_r[i] = 1.0
             diag_r = np.maximum(diag_r, 1e-6)
-            self._R = np.diag(diag_r).astype(np.float64)
+            self._R = np.diag(diag_r).astype(np.float64)  # type: ignore[reportConstantRedefinition]
 
             # Update A (factor dynamics)
             sum_ff_lag = np.zeros((nf, nf * self.factor_lags))
@@ -597,13 +603,13 @@ class DFMNowcaster:
                 sum_ff_lag_lag += np.outer(f_lags, f_lags)
 
             try:
-                self._A = (sum_ff_lag @ np.linalg.inv(sum_ff_lag_lag)).astype(
-                    np.float64
-                )
+                self._A = (  # type: ignore[reportConstantRedefinition]
+                    sum_ff_lag @ np.linalg.inv(sum_ff_lag_lag)
+                ).astype(np.float64)
             except np.linalg.LinAlgError:
-                self._A = (sum_ff_lag @ np.linalg.pinv(sum_ff_lag_lag)).astype(
-                    np.float64
-                )
+                self._A = (  # type: ignore[reportConstantRedefinition]
+                    sum_ff_lag @ np.linalg.pinv(sum_ff_lag_lag)
+                ).astype(np.float64)
 
             # Update Q
             sum_uu = np.zeros((nf, nf))
@@ -615,9 +621,9 @@ class DFMNowcaster:
                 u = f_t - self._A @ f_lags
                 sum_uu += np.outer(u, u)
 
-            self._Q = (sum_uu / max(1, n_t - self.factor_lags)).astype(np.float64)
-            self._Q = (self._Q + self._Q.T) / 2  # Symmetrize
-            self._Q = np.maximum(self._Q, np.eye(nf) * 1e-6)
+            self._Q = (sum_uu / max(1, n_t - self.factor_lags)).astype(np.float64)  # type: ignore[reportConstantRedefinition]
+            self._Q = (self._Q + self._Q.T) / 2  # type: ignore[reportConstantRedefinition]  # Symmetrize
+            self._Q = np.maximum(self._Q, np.eye(nf) * 1e-6)  # type: ignore[reportConstantRedefinition]
 
         # Store factors
         if result is not None and result.smoothed_state is not None:

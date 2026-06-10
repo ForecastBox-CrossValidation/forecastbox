@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 from numpy.typing import NDArray
 
 from forecastbox.combination.base import BaseCombiner
@@ -134,9 +136,9 @@ class TimeVaryingCombiner(BaseCombiner):
     def plot_weights(
         self,
         model_names: list[str] | None = None,
-        ax: plt.Axes | None = None,
+        ax: Axes | None = None,
         title: str = "Time-Varying Combination Weights",
-    ) -> plt.Axes:
+    ) -> Axes:
         """Plot the evolution of combination weights over time.
 
         Parameters
@@ -158,7 +160,8 @@ class TimeVaryingCombiner(BaseCombiner):
             raise ValueError(msg)
 
         if ax is None:
-            _, ax = plt.subplots(figsize=(12, 6))
+            subplot_result: tuple[Figure, Axes] = plt.subplots(figsize=(12, 6))  # type: ignore[reportUnknownMemberType]
+            ax = subplot_result[1]
 
         t, k = self.weights_history_.shape
 
@@ -166,18 +169,18 @@ class TimeVaryingCombiner(BaseCombiner):
             model_names = [f"Model {i}" for i in range(k)]
 
         for i in range(k):
-            ax.plot(
+            ax.plot(  # type: ignore[reportUnknownMemberType]
                 range(t),
                 self.weights_history_[:, i],
                 label=model_names[i],
                 linewidth=1.5,
             )
 
-        ax.set_xlabel("Time")
-        ax.set_ylabel("Weight")
-        ax.set_title(title)
-        ax.legend()
+        ax.set_xlabel("Time")  # type: ignore[reportUnknownMemberType]
+        ax.set_ylabel("Weight")  # type: ignore[reportUnknownMemberType]
+        ax.set_title(title)  # type: ignore[reportUnknownMemberType]
+        ax.legend()  # type: ignore[reportUnknownMemberType]
         ax.set_ylim(0, 1)
-        ax.grid(True, alpha=0.3)
+        ax.grid(True, alpha=0.3)  # type: ignore[reportUnknownMemberType]
 
         return ax

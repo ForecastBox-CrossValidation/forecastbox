@@ -50,7 +50,9 @@ SEASONAL_TYPES = ("N", "A", "M")
 def _try_import_ets() -> Any:
     """Try to import statsmodels ExponentialSmoothing."""
     try:
-        from statsmodels.tsa.holtwinters import ExponentialSmoothing
+        from statsmodels.tsa.holtwinters import (  # type: ignore[reportMissingTypeStubs]
+            ExponentialSmoothing,
+        )
 
         return ExponentialSmoothing
     except ImportError:
@@ -578,7 +580,7 @@ class AutoETS:
         best = min(all_candidates, key=lambda c: c.ic_value)
 
         # Build all_models DataFrame
-        all_models_data = []
+        all_models_data: list[dict[str, Any]] = []
         for c in all_candidates:
             model_type = f"ETS({c.error},{c.trend},{c.seasonal})"
             all_models_data.append(

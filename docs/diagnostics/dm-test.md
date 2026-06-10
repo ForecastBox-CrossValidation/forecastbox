@@ -437,7 +437,7 @@ Antes de reportar o resultado do DM test, verifique:
 - [ ] **Estabilidade temporal**: a superioridade e constante? (inspecionar CUSUM)
 
 !!! info "See Also"
-    - :material-book-open-variant: **Teoria**: [Teste Diebold-Mariano](../theory/diebold_mariano.md) — formulacao teorica e propriedades assintoticas
+    - :material-book-open-variant: **Teoria**: [Teste Diebold-Mariano](../theory/evaluation-theory.md) — formulacao teorica e propriedades assintoticas
     - :material-notebook-edit: **User Guide**: [Diebold-Mariano — Formulacao](../user-guide/evaluation/diebold-mariano.md) — formulacao e implementacao
     - :material-link-variant: **Relacionado**: [MCS Diagnostic](mcs-diagnostic.md) — comparacao multipla com controle de tamanho
     - :material-link-variant: **Relacionado**: [GW Test](gw-test.md) — quando a superioridade e condicional ou instavel

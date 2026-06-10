@@ -449,7 +449,7 @@ Taxa Desemprego         -0.1770   0.0650    -0.0115     4.9%
 Apos diagnosticar as revisoes via news, avalie se as previsoes se mantem validas com dados em **tempo real** — veja [Real-Time Diagnostic](real-time.md).
 
 !!! info "See Also"
-    - :material-book-open-variant: **Teoria**: [News Decomposition](../theory/news_decomposition.md) — fundamentos teoricos da decomposicao de revisoes
+    - :material-book-open-variant: **Teoria**: [News Decomposition](../theory/nowcasting-theory.md) — fundamentos teoricos da decomposicao de revisoes
     - :material-notebook-edit: **User Guide**: [News Decomposition](../user-guide/nowcasting/news.md) — como usar news no pipeline de nowcasting
     - :material-link-variant: **Relacionado**: [Real-Time Diagnostic](real-time.md) — diagnostico com dados em tempo real e vintages
     - :material-link-variant: **Relacionado**: [Vintages](../user-guide/nowcasting/vintages.md) — gestao de vintages de dados

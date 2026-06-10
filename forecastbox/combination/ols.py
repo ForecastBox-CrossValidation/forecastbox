@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy.optimize import minimize
+from scipy.optimize import minimize  # type: ignore[reportMissingTypeStubs]
 
 from forecastbox.combination.base import BaseCombiner
 
@@ -147,6 +147,7 @@ class OLSCombiner(BaseCombiner):
             # Standard OLS: (X'X)^{-1} X'y
             beta, _, _, _ = np.linalg.lstsq(x, actual, rcond=None)
 
+        beta = np.asarray(beta, dtype=np.float64)
         if self.intercept:
             self.intercept_ = float(beta[0])
             return beta[1:]
@@ -190,12 +191,15 @@ class OLSCombiner(BaseCombiner):
         w0 = np.full(k, 1.0 / k)
 
         # Constraints: sum(w) = 1
-        constraints = {"type": "eq", "fun": lambda w: np.sum(w) - 1.0}
+        def constraint_fun(w: NDArray[np.float64]) -> float:
+            return float(np.sum(w) - 1.0)
+
+        constraints = {"type": "eq", "fun": constraint_fun}
 
         # Bounds: w_k >= 0
         bounds = [(0.0, None) for _ in range(k)]
 
-        result = minimize(
+        result = minimize(  # type: ignore[reportUnknownVariableType]
             objective,
             w0,
             jac=objective_jac,
@@ -205,8 +209,8 @@ class OLSCombiner(BaseCombiner):
             options={"maxiter": 1000, "ftol": 1e-12},
         )
 
-        if not result.success:
-            msg = f"Constrained optimization failed: {result.message}"
+        if not result.success:  # type: ignore[reportUnknownMemberType]
+            msg = f"Constrained optimization failed: {result.message}"  # type: ignore[reportUnknownMemberType]
             raise RuntimeError(msg)
 
-        return np.asarray(result.x, dtype=np.float64)
+        return np.asarray(result.x, dtype=np.float64)  # type: ignore[reportUnknownMemberType]

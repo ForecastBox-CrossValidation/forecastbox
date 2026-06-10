@@ -51,7 +51,7 @@ class CVFold:
     test_end: int
     actual: NDArray[np.float64]
     predicted: NDArray[np.float64]
-    metrics: dict[str, float] = field(default_factory=dict)
+    metrics: dict[str, float] = field(default_factory=lambda: {})
 
 
 @dataclass
@@ -265,7 +265,7 @@ def rolling_window_cv(
             predicted = np.asarray(result, dtype=np.float64)[:horizon]
 
         # Compute metrics
-        fold_metrics = {}
+        fold_metrics: dict[str, float] = {}
         for metric_name in metrics:
             fold_metrics[metric_name] = _compute_metric(
                 test_actual, predicted, metric_name
@@ -369,7 +369,7 @@ def blocked_cv(
         if len(train_indices) < 1:
             continue
 
-        train = data.iloc[train_indices]
+        train = data.iloc[np.asarray(train_indices, dtype=np.intp)]
 
         # Test: first 'horizon' points of the test block
         test_actual_end = min(test_start + horizon, test_end)
@@ -396,7 +396,7 @@ def blocked_cv(
             predicted = np.asarray(result, dtype=np.float64)[:actual_horizon]
 
         # Compute metrics
-        fold_metrics = {}
+        fold_metrics: dict[str, float] = {}
         for metric_name in metrics:
             fold_metrics[metric_name] = _compute_metric(
                 test_actual, predicted, metric_name

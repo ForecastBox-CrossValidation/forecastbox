@@ -13,25 +13,20 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 
 from forecastbox.pipeline.pipeline import PipelineResults
 
 
-def _fig_to_base64(fig: plt.Figure) -> str:
+def _fig_to_base64(fig: Figure) -> str:
     """Convert matplotlib figure to base64 PNG string."""
     buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=100, bbox_inches="tight")
+    fig.savefig(buf, format="png", dpi=100, bbox_inches="tight")  # type: ignore[reportUnknownMemberType]
     buf.seek(0)
     encoded = base64.b64encode(buf.read()).decode("utf-8")
     plt.close(fig)
     return encoded
-
-
-def _fig_to_path(fig: plt.Figure, path: str) -> str:
-    """Save figure to file and return path."""
-    fig.savefig(path, dpi=100, bbox_inches="tight")
-    plt.close(fig)
-    return path
 
 
 def section_summary(results: PipelineResults, **kwargs: Any) -> dict[str, Any]:
@@ -66,7 +61,7 @@ def section_summary(results: PipelineResults, **kwargs: Any) -> dict[str, Any]:
         for col in results.evaluation.columns:
             val = results.evaluation.loc[best, col]
             if not pd.isna(val):
-                key_metrics[col] = float(val)
+                key_metrics[col] = float(val)  # type: ignore[reportArgumentType]
 
     total_time = sum(results.execution_time.values()) if results.execution_time else 0.0
 
@@ -150,7 +145,8 @@ def section_forecasts(results: PipelineResults, **kwargs: Any) -> dict[str, Any]
     plot_base64 = None
     try:
         from forecastbox.viz.forecast_plots import comparison_plot
-        fig, ax = plt.subplots(figsize=(12, 6))
+        subplot_result: tuple[Figure, Axes] = plt.subplots(figsize=(12, 6))  # type: ignore[reportUnknownMemberType]
+        fig, ax = subplot_result
         comparison_plot(results.forecasts, ax=ax)
         plot_base64 = _fig_to_base64(fig)
     except Exception:
@@ -173,7 +169,7 @@ def section_evaluation(results: PipelineResults, **kwargs: Any) -> dict[str, Any
     dict[str, Any]
         Section with evaluation metrics.
     """
-    eval_dict: dict[str, Any] = {}
+    eval_dict: dict[Any, Any] = {}
     if not results.evaluation.empty:
         eval_dict = results.evaluation.to_dict()
 

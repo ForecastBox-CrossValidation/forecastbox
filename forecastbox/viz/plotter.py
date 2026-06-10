@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 
 from forecastbox.core.forecast import Forecast
 from forecastbox.pipeline.pipeline import PipelineResults
@@ -43,9 +44,9 @@ class ForecastPlotter:
         model: str | None = None,
         actual: np.ndarray | pd.Series | None = None,
         history: pd.Series | None = None,
-        ax: plt.Axes | None = None,
+        ax: Axes | None = None,
         title: str | None = None,
-    ) -> plt.Axes:
+    ) -> Axes:
         """Plot forecast for a specific model.
 
         Parameters
@@ -73,9 +74,9 @@ class ForecastPlotter:
         model: str | None = None,
         history: pd.Series | None = None,
         history_periods: int = 36,
-        ax: plt.Axes | None = None,
+        ax: Axes | None = None,
         title: str | None = None,
-    ) -> plt.Axes:
+    ) -> Axes:
         """Create fan chart for a model.
 
         Parameters
@@ -105,9 +106,9 @@ class ForecastPlotter:
         self,
         models: list[str] | None = None,
         actual: np.ndarray | pd.Series | None = None,
-        ax: plt.Axes | None = None,
+        ax: Axes | None = None,
         title: str | None = None,
-    ) -> plt.Axes:
+    ) -> Axes:
         """Plot multiple models overlaid.
 
         Parameters
@@ -138,9 +139,9 @@ class ForecastPlotter:
         self,
         metric: str = "rmse",
         by: str = "model",
-        ax: plt.Axes | None = None,
+        ax: Axes | None = None,
         title: str | None = None,
-    ) -> plt.Axes:
+    ) -> Axes:
         """Plot accuracy metrics.
 
         Parameters
@@ -167,9 +168,9 @@ class ForecastPlotter:
         self,
         variable: str | None = None,
         scenarios: dict[str, Forecast | np.ndarray] | None = None,
-        ax: plt.Axes | None = None,
+        ax: Axes | None = None,
         title: str | None = None,
-    ) -> plt.Axes:
+    ) -> Axes:
         """Plot scenario comparison.
 
         Parameters
@@ -196,9 +197,9 @@ class ForecastPlotter:
         target: str | None = None,
         nowcasts: dict[str, float] | pd.Series | None = None,
         vintages: list[str] | None = None,
-        ax: plt.Axes | None = None,
+        ax: Axes | None = None,
         title: str | None = None,
-    ) -> plt.Axes:
+    ) -> Axes:
         """Plot nowcast evolution.
 
         Parameters
@@ -228,9 +229,9 @@ class ForecastPlotter:
         self,
         weights: dict[str, float] | pd.Series | pd.DataFrame | None = None,
         method: str | None = None,
-        ax: plt.Axes | None = None,
+        ax: Axes | None = None,
         title: str | None = None,
-    ) -> plt.Axes:
+    ) -> Axes:
         """Plot combination weights.
 
         Parameters
@@ -257,9 +258,9 @@ class ForecastPlotter:
         self,
         model: str | None = None,
         metric: str = "rmse",
-        ax: plt.Axes | None = None,
+        ax: Axes | None = None,
         title: str | None = None,
-    ) -> plt.Axes:
+    ) -> Axes:
         """Plot cross-validation results.
 
         Parameters
@@ -285,8 +286,8 @@ class ForecastPlotter:
     def residual_plot(
         self,
         model: str | None = None,
-        fig: plt.Figure | None = None,
-    ) -> plt.Figure:
+        fig: Figure | None = None,
+    ) -> Figure:
         """Create residual diagnostic plot.
 
         Parameters
@@ -305,7 +306,7 @@ class ForecastPlotter:
         residuals = fc.point - np.mean(fc.point)
         return residual_plot(residuals, model_name=fc.model_name, fig=fig)
 
-    def pipeline_dashboard(self, fig: plt.Figure | None = None) -> plt.Figure:
+    def pipeline_dashboard(self, fig: Figure | None = None) -> Figure:
         """Create pipeline summary dashboard.
 
         Parameters

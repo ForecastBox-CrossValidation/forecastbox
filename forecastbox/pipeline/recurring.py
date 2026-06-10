@@ -9,6 +9,8 @@ from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 
 from forecastbox.pipeline.pipeline import ForecastPipeline, PipelineResults
 
@@ -196,7 +198,7 @@ class RecurringForecast:
 
         return pd.DataFrame(revisions)
 
-    def plot_evolution(self, variable: str | None = None, ax: plt.Axes | None = None) -> plt.Axes:
+    def plot_evolution(self, variable: str | None = None, ax: Axes | None = None) -> Axes:
         """Plot forecast evolution across executions.
 
         Parameters
@@ -212,21 +214,22 @@ class RecurringForecast:
             The matplotlib Axes object.
         """
         if ax is None:
-            _, ax = plt.subplots(figsize=(12, 6))
+            subplot_result: tuple[Figure, Axes] = plt.subplots(figsize=(12, 6))  # type: ignore[reportUnknownMemberType]
+            ax = subplot_result[1]
 
         evolution = self.forecast_evolution(variable)
         if evolution.empty:
-            ax.text(0.5, 0.5, "No data available", ha="center", va="center", transform=ax.transAxes)
+            ax.text(0.5, 0.5, "No data available", ha="center", va="center", transform=ax.transAxes)  # type: ignore[reportUnknownMemberType]
             return ax
 
         for col in evolution.columns:
-            ax.plot(evolution.index, evolution[col], marker="o", label=col, markersize=4)
+            ax.plot(evolution.index, evolution[col], marker="o", label=col, markersize=4)  # type: ignore[reportUnknownMemberType]
 
-        ax.set_title("Forecast Evolution Over Time")
-        ax.set_xlabel("Execution Date")
-        ax.set_ylabel("Forecast Value")
-        ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
-        ax.grid(True, alpha=0.3)
+        ax.set_title("Forecast Evolution Over Time")  # type: ignore[reportUnknownMemberType]
+        ax.set_xlabel("Execution Date")  # type: ignore[reportUnknownMemberType]
+        ax.set_ylabel("Forecast Value")  # type: ignore[reportUnknownMemberType]
+        ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left")  # type: ignore[reportUnknownMemberType]
+        ax.grid(True, alpha=0.3)  # type: ignore[reportUnknownMemberType]
 
         return ax
 

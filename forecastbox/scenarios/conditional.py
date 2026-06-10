@@ -376,7 +376,7 @@ class ConditionalForecast:
         endog = self.model.endog
         residuals = self.model.residuals
 
-        t_eff = residuals.shape[0]  # effective sample size
+        t_eff: int = int(residuals.shape[0])  # effective sample size
 
         # Pre-compute constraint matrix
         sel, vals = self._build_constraint_matrix(conditions, steps)
@@ -386,8 +386,8 @@ class ConditionalForecast:
 
         for s in range(n_draws):
             # Step 1: Draw Sigma from inverse-Wishart posterior
-            scale = rng.gamma(t_eff / 2, 2.0 / t_eff)
-            sig_draw = sigma_u * scale
+            scale: float = float(rng.gamma(t_eff / 2, 2.0 / t_eff))
+            sig_draw: NDArray[np.float64] = sigma_u * scale
 
             # Ensure positive definite
             sig_draw = (sig_draw + sig_draw.T) / 2

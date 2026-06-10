@@ -5,10 +5,11 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
 
 from forecastbox._logging import get_logger
 from forecastbox.core.forecast import Forecast
@@ -40,14 +41,16 @@ class ExperimentResults:
         Additional metadata.
     """
 
-    forecasts: dict[str, Forecast] = field(default_factory=dict)
+    forecasts: dict[str, Forecast] = field(
+        default_factory=lambda: dict[str, Forecast]()
+    )
     combination: Forecast | None = None
     evaluation: pd.DataFrame | None = None
     scenarios: dict[str, Any] | None = None
     cv_results: dict[str, Any] | None = None
     ranking: pd.DataFrame | None = None
     mcs: Any | None = None
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=lambda: dict[str, Any]())
 
     def save(self, directory: str | Path) -> None:
         """Save all results to a directory.
@@ -428,6 +431,12 @@ class ForecastExperiment:
         # Step 1: Auto-forecast all models
         logger.info("Step 1: Auto-forecasting...")
         results.forecasts = self._auto_forecast()
+        if not results.forecasts:
+            raise RuntimeError(
+                f"All requested models failed to produce a forecast "
+                f"(requested: {self.models}). Check the warnings above for "
+                f"per-model failure reasons; no report can be generated."
+            )
 
         # Step 2: Combine forecasts
         if len(results.forecasts) > 1:
@@ -574,13 +583,21 @@ class ForecastExperiment:
         if cv_results:
             metrics_data: dict[str, dict[str, float]] = {}
             for model_name, cv_res in cv_results.items():
-                if isinstance(cv_res, dict) and "metrics" in cv_res:
-                    metrics_data[model_name] = cv_res["metrics"]
-                elif hasattr(cv_res, "summary"):
+                cv_obj: object = cv_res
+                if isinstance(cv_obj, dict):
+                    cv_dict = cast("dict[str, object]", cv_obj)
+                    metrics_value = cv_dict.get("metrics")
+                    if isinstance(metrics_value, dict):
+                        metrics_data[model_name] = cast(
+                            "dict[str, float]", metrics_value
+                        )
+                elif hasattr(cv_obj, "summary"):
                     try:
-                        summary = cv_res.summary()
+                        summary: object = cv_obj.summary()  # type: ignore[attr-defined]
                         if isinstance(summary, dict):
-                            metrics_data[model_name] = summary
+                            metrics_data[model_name] = cast(
+                                "dict[str, float]", summary
+                            )
                     except Exception:
                         pass
 
@@ -600,10 +617,14 @@ class ForecastExperiment:
                 # Build error series from CV results
                 error_series: dict[str, np.ndarray] = {}
                 for model_name, cv_res in cv_results.items():
-                    if isinstance(cv_res, dict) and "errors" in cv_res:
-                        error_series[model_name] = np.array(cv_res["errors"])
-                    elif hasattr(cv_res, "errors"):
-                        error_series[model_name] = np.array(cv_res.errors)
+                    cv_obj: object = cv_res
+                    if isinstance(cv_obj, dict):
+                        cv_dict = cast("dict[str, object]", cv_obj)
+                        if "errors" in cv_dict:
+                            error_series[model_name] = np.array(cv_dict["errors"])
+                    elif hasattr(cv_obj, "errors"):
+                        errors_value: object = cv_obj.errors  # type: ignore[attr-defined]
+                        error_series[model_name] = np.array(errors_value)
 
                 if len(error_series) >= 2:
                     # model_confidence_set expects actual + forecasts dict
@@ -646,12 +667,18 @@ class ForecastExperiment:
             var_result = var.fit(self.data)
             builder = ScenarioBuilder(var_result.model)
 
-            for name, conditions in self.scenarios.items():
+            scenarios: dict[str, Any] = self.scenarios
+            for name, conditions in scenarios.items():
                 # ScenarioBuilder expects dict[str, list[float]]
-                list_conditions = {
-                    k: [v] * self.horizon if isinstance(v, (int, float)) else list(v)
-                    for k, v in conditions.items()
-                }
+                cond_dict = cast("dict[str, Any]", conditions)
+                list_conditions: dict[
+                    str, list[float] | NDArray[np.float64]
+                ] = {}
+                for k, v in cond_dict.items():
+                    if isinstance(v, (int, float)):
+                        list_conditions[k] = [float(v)] * self.horizon
+                    else:
+                        list_conditions[k] = [float(x) for x in v]
                 builder.add_scenario(name, list_conditions)
 
             results = builder.run(steps=self.horizon)

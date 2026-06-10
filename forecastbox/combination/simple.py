@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy import stats
+from scipy import stats  # type: ignore[reportMissingTypeStubs]
 
 from forecastbox.combination.base import BaseCombiner
 from forecastbox.core.forecast import Forecast
@@ -102,7 +102,9 @@ class SimpleCombiner(BaseCombiner):
             combined_point = np.median(points, axis=0)
         elif self.method == "trimmed":
             self.weights_ = np.full(k, 1.0 / k)  # nominal weights
-            combined_point = stats.trim_mean(points, self.trim_fraction, axis=0)
+            combined_point = stats.trim_mean(  # type: ignore[reportUnknownMemberType]
+                points, self.trim_fraction, axis=0
+            )
         else:
             msg = f"Unknown method: {self.method}"
             raise ValueError(msg)
@@ -160,5 +162,8 @@ class SimpleCombiner(BaseCombiner):
         elif self.method == "median":
             return np.median(arr, axis=0)
         elif self.method == "trimmed":
-            return stats.trim_mean(arr, self.trim_fraction, axis=0)
+            result: NDArray[np.float64] = stats.trim_mean(  # type: ignore[reportUnknownMemberType]
+                arr, self.trim_fraction, axis=0
+            )
+            return result
         return None

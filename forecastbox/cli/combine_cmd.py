@@ -15,6 +15,12 @@ from forecastbox._logging import get_logger
 
 logger = get_logger("cli.combine")
 
+# Methods that estimate weights from realized values and therefore require
+# the --actual option. Simple methods (mean/median) do not.
+_FIT_METHODS = frozenset(
+    {"inverse_mse", "ols", "bma", "stacking", "optimal"}
+)
+
 
 @click.command("combine")
 @click.option(
@@ -28,11 +34,13 @@ logger = get_logger("cli.combine")
     "--actual",
     type=click.Path(exists=True),
     default=None,
-    help="CSV with actuals for weight estimation.",
+    help="CSV with actuals for weight estimation (required for fit-based methods).",
 )
 @click.option(
     "--method",
-    type=click.Choice(["mean", "median", "inverse_mse", "ols", "bma", "stacking", "optimal"]),
+    type=click.Choice(
+        ["mean", "median", "inverse_mse", "ols", "bma", "stacking", "optimal"]
+    ),
     default="mean",
     help="Combination method (default: mean).",
 )
@@ -47,12 +55,13 @@ def combine(
 ) -> None:
     """Combine multiple forecasts.
 
-    Supports simple methods (mean, median) and advanced methods
-    (BMA, stacking, optimal) that use actual values to estimate weights.
+    Supports simple methods (mean, median) and weight-estimating methods
+    (inverse_mse, ols, bma, stacking, optimal) that use actual values to
+    estimate combination weights.
 
     Example:
         forecastbox combine --forecasts fc1.json fc2.json fc3.json \
-            --method bma --output combined.json
+            --method bma --actual actuals.csv --output combined.json
     """
     import logging
 
@@ -78,30 +87,28 @@ def combine(
 
     click.echo(f"Combining {len(loaded_forecasts)} forecasts using '{method}'...")
 
-    # Load actual values if needed
+    # Load actual values if provided.
     actual_values: np.ndarray | None = None
     if actual:
         try:
             actual_df = pd.read_csv(actual, parse_dates=True, index_col=0)
-            actual_values = actual_df.iloc[:, 0].values
+            actual_values = np.asarray(actual_df.iloc[:, 0].to_numpy(), dtype=float)
         except Exception as e:
             click.echo(f"Error loading actual values: {e}", err=True)
             sys.exit(1)
 
+    if method in _FIT_METHODS and actual_values is None:
+        click.echo(
+            f"Error: method '{method}' requires --actual values to estimate weights.",
+            err=True,
+        )
+        sys.exit(1)
+
     # Combine
     try:
-        if method in ("mean", "median"):
-            combined = Forecast.combine(loaded_forecasts, method=method)
-        else:
-            from forecastbox.combination.methods import combine_forecasts
-
-            combined = combine_forecasts(
-                forecasts=loaded_forecasts,
-                actual=actual_values,
-                method=method,
-            )
+        combined = _combine(method, loaded_forecasts, actual_values)
     except ImportError as e:
-        click.echo(f"Error: combination module not available: {e}", err=True)
+        click.echo(f"Error: combination backend not available: {e}", err=True)
         sys.exit(1)
     except Exception as e:
         click.echo(f"Error during combination: {e}", err=True)
@@ -132,3 +139,53 @@ def combine(
         if combined.upper_95 is not None:
             result["upper_95"] = combined.upper_95.tolist()
         click.echo(json.dumps(result, indent=2))
+
+
+def _combine(
+    method: str,
+    forecasts: list[Any],
+    actual_values: np.ndarray | None,
+) -> Any:
+    """Build a combiner for ``method`` and produce the combined forecast.
+
+    Simple methods (mean/median) use :class:`SimpleCombiner` and need no
+    fitting. Weight-estimating methods fit on the loaded forecast point
+    arrays (as historical forecasts) against ``actual_values``.
+    """
+    from forecastbox.combination import (
+        BMACombiner,
+        OLSCombiner,
+        OptimalCombiner,
+        SimpleCombiner,
+        StackingCombiner,
+        WeightedCombiner,
+    )
+
+    if method in ("mean", "median"):
+        return SimpleCombiner(method=method).combine(forecasts)
+
+    # Fit-based methods: use the forecast point arrays as the historical
+    # forecasts and align them with the realized actuals.
+    assert actual_values is not None  # guaranteed by caller
+    forecasts_train = [np.asarray(fc.point, dtype=float) for fc in forecasts]
+    train_len = min(min(len(arr) for arr in forecasts_train), len(actual_values))
+    forecasts_train = [arr[:train_len] for arr in forecasts_train]
+    actual_train = actual_values[:train_len]
+
+    combiner: Any
+    if method == "inverse_mse":
+        combiner = WeightedCombiner(method="inverse_mse")
+    elif method == "ols":
+        combiner = OLSCombiner()
+    elif method == "bma":
+        combiner = BMACombiner()
+    elif method == "stacking":
+        combiner = StackingCombiner()
+    elif method == "optimal":
+        combiner = OptimalCombiner()
+    else:  # pragma: no cover - guarded by click.Choice
+        msg = f"Unknown combination method: {method}"
+        raise ValueError(msg)
+
+    combiner.fit(forecasts_train, actual_train)
+    return combiner.combine(forecasts)

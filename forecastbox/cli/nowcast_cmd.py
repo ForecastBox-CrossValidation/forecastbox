@@ -70,6 +70,14 @@ def nowcast(
         )
         sys.exit(1)
 
+    indicators = [c for c in df.columns if c != target]
+    if not indicators:
+        click.echo(
+            f"Error: no indicator columns found besides target '{target}'.",
+            err=True,
+        )
+        sys.exit(1)
+
     click.echo(f"Nowcasting '{target}' using {method} (factors={factors})...")
 
     result: dict[str, Any] = {
@@ -83,44 +91,52 @@ def nowcast(
         if method == "dfm":
             from forecastbox.nowcasting.dfm import DFMNowcaster
 
-            nowcaster = DFMNowcaster(n_factors=factors)
+            # The target is treated as quarterly; all other columns as monthly.
+            frequency_map = {target: "Q"}
+            for col in indicators:
+                frequency_map[col] = "M"
+
+            nowcaster = DFMNowcaster(n_factors=factors, frequency_map=frequency_map)
             nowcaster.fit(df)
-            nc = nowcaster.nowcast(target=target)
-            result["nowcast"] = float(nc.point) if hasattr(nc, "point") else float(nc)
-            result["model_info"] = getattr(nc, "metadata", {})
+            fc = nowcaster.nowcast(target=target, reference_date=reference_date)
+            result["nowcast"] = float(fc.point[0])
+            result["model_name"] = fc.model_name
+            result["model_info"] = dict(fc.metadata)
 
             if news:
                 click.echo("Computing news decomposition...")
-                try:
-                    from forecastbox.nowcasting.news import NewsDecomposition
+                from forecastbox.nowcasting.news import NewsDecomposition
 
-                    news_decomp = NewsDecomposition(nowcaster)
-                    news_result = news_decomp.decompose(df, df)
-                    result["news"] = {
-                        "total_revision": float(news_result.total_revision),
-                        "contributions": {
-                            k: float(v) for k, v in news_result.contributions.items()
-                        },
-                    }
-                    click.echo(f"News decomposition: {result['news']}")
-                except ImportError as e:
-                    click.echo(f"Warning: news module not available: {e}")
+                news_decomp = NewsDecomposition(nowcaster)
+                news_result = news_decomp.decompose(df, df, target=target)
+                result["news"] = {
+                    "total_revision": float(news_result.total_revision),
+                    "old_nowcast": float(news_result.old_nowcast),
+                    "new_nowcast": float(news_result.new_nowcast),
+                    "contributions": {
+                        k: float(v) for k, v in news_result.contributions.items()
+                    },
+                }
+                click.echo(f"News total revision: {result['news']['total_revision']}")
 
         elif method == "bridge":
             from forecastbox.nowcasting.bridge import BridgeEquation
 
-            bridge = BridgeEquation()
-            bridge.fit(df, target=target)
-            nc = bridge.nowcast()
-            result["nowcast"] = float(nc.point) if hasattr(nc, "point") else float(nc)
+            bridge = BridgeEquation(target=target, indicators=indicators)
+            bridge.fit(df)
+            fc = bridge.nowcast(reference_date=reference_date)
+            result["nowcast"] = float(fc.point[0])
+            result["model_name"] = fc.model_name
+            result["r_squared"] = float(bridge.r_squared())
 
         elif method == "midas":
-            from forecastbox.nowcasting.midas import MIDASNowcaster
+            from forecastbox.nowcasting.midas import MIDAS
 
-            midas = MIDASNowcaster()
-            midas.fit(df, target=target)
-            nc = midas.nowcast()
-            result["nowcast"] = float(nc.point) if hasattr(nc, "point") else float(nc)
+            midas = MIDAS(target=target, high_freq=indicators)
+            midas.fit(df)
+            fc = midas.nowcast()
+            result["nowcast"] = float(fc.point[0])
+            result["model_name"] = fc.model_name
 
     except ImportError as e:
         click.echo(f"Error: nowcasting module not available: {e}", err=True)

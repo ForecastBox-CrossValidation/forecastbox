@@ -48,8 +48,14 @@ class TestForecastCmd:
                 "--no-cv",
             ],
         )
-        # Command should execute (may fail on model import but should not crash CLI)
-        assert result.exit_code == 0 or "Error" in result.output
+        assert result.exit_code == 0, result.output
+        assert "Fitting auto_arima on 'y'" in result.output
+        assert "Horizon: 12" in result.output
+        # The printed JSON payload should carry a 12-step point forecast.
+        payload = json.loads(result.output[result.output.index('{\n  "model"'):])
+        assert len(payload["point"]) == 12
+        assert payload["horizon"] == 12
+        assert payload["model"]
 
     def test_output_json(self, sample_csv: Path, tmp_path: Path) -> None:
         """--output fc.json saves a valid JSON file."""
@@ -68,10 +74,13 @@ class TestForecastCmd:
                 "--no-cv",
             ],
         )
-        if result.exit_code == 0 and output_path.exists():
-            data = json.loads(output_path.read_text())
-            assert "point" in data
-            assert "model" in data
+        assert result.exit_code == 0, result.output
+        assert output_path.exists()
+        data = json.loads(output_path.read_text())
+        assert "point" in data
+        assert "model" in data
+        assert len(data["point"]) == 6
+        assert data["horizon"] == 6
 
     def test_output_csv(self, sample_csv: Path, tmp_path: Path) -> None:
         """--format csv --output fc.csv saves a valid CSV file."""
@@ -90,9 +99,11 @@ class TestForecastCmd:
                 "--no-cv",
             ],
         )
-        if result.exit_code == 0 and output_path.exists():
-            df = pd.read_csv(output_path, index_col=0)
-            assert "point" in df.columns
+        assert result.exit_code == 0, result.output
+        assert output_path.exists()
+        df = pd.read_csv(output_path, index_col=0)
+        assert "point" in df.columns
+        assert len(df) == 6
 
     def test_model_selection(self, sample_csv: Path) -> None:
         """--model auto_ets uses AutoETS."""
@@ -109,12 +120,56 @@ class TestForecastCmd:
                 "--no-cv",
             ],
         )
-        # Should attempt to use AutoETS
-        assert (
-            result.exit_code == 0
-            or "auto_ets" in result.output.lower()
-            or "Error" in result.output
+        assert result.exit_code == 0, result.output
+        assert "Fitting auto_ets on 'y'" in result.output
+        # AutoETS produces an ETS(...) model name.
+        payload = json.loads(result.output[result.output.index('{\n  "model"'):])
+        assert payload["model"].startswith("ETS")
+
+    def test_auto_select(self, sample_csv: Path) -> None:
+        """--model auto_select fits AutoSelect and forecasts."""
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "forecast",
+                "--data", str(sample_csv),
+                "--target", "y",
+                "--model", "auto_select",
+                "--horizon", "6",
+                "--no-plot",
+                "--no-cv",
+            ],
         )
+        assert result.exit_code == 0, result.output
+        assert "Fitting auto_select on 'y'" in result.output
+        payload = json.loads(result.output[result.output.index('{\n  "model"'):])
+        assert len(payload["point"]) == 6
+
+    def test_cross_validation(self, sample_csv: Path) -> None:
+        """--cv runs expanding-window CV and reports metrics."""
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "forecast",
+                "--data", str(sample_csv),
+                "--target", "y",
+                "--horizon", "6",
+                "--no-plot",
+                "--cv",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert "Running cross-validation..." in result.output
+        assert "CV Metrics:" in result.output
+        assert "Warning: CV failed" not in result.output
+        # The CV metrics line prints a dict repr; the JSON payload begins at the
+        # multi-line object that opens with the "model" key.
+        json_start = result.output.index('{\n  "model"')
+        payload = json.loads(result.output[json_start:])
+        assert "metrics" in payload
+        assert "rmse" in payload["metrics"]
 
     def test_verbose(self, sample_csv: Path) -> None:
         """-v produces verbose output."""
@@ -131,8 +186,8 @@ class TestForecastCmd:
                 "-v",
             ],
         )
-        # Verbose flag should be accepted
-        assert result.exit_code == 0 or "Error" in result.output
+        assert result.exit_code == 0, result.output
+        assert "Metadata:" in result.output
 
     def test_missing_data_error(self) -> None:
         """Non-existent file produces clear error."""
@@ -142,3 +197,19 @@ class TestForecastCmd:
             ["forecast", "--data", "/nonexistent/path.csv", "--target", "y"],
         )
         assert result.exit_code != 0
+
+    def test_missing_target_error(self, sample_csv: Path) -> None:
+        """Unknown target column produces a clear error and non-zero exit."""
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "forecast",
+                "--data", str(sample_csv),
+                "--target", "does_not_exist",
+                "--no-plot",
+                "--no-cv",
+            ],
+        )
+        assert result.exit_code != 0
+        assert "not found in data" in result.output

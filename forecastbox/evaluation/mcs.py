@@ -234,7 +234,8 @@ def model_confidence_set(
         fc_arrays[name] = fc_arr
 
     if block_length is None:
-        block_length = max(1, int(math.floor(n_obs ** (1.0 / 3.0))))
+        cube_root: float = float(n_obs) ** (1.0 / 3.0)
+        block_length = max(1, int(math.floor(cube_root)))
 
     rng = np.random.default_rng(seed)
 

@@ -11,11 +11,13 @@ Cambridge University Press. Chapter 4.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.axes import Axes
 from numpy.typing import NDArray
 
 if TYPE_CHECKING:
@@ -61,9 +63,9 @@ class CounterfactualResult:
 
     def plot(
         self,
-        ax: plt.Axes | None = None,
+        ax: Axes | None = None,
         title: str | None = None,
-    ) -> plt.Axes:
+    ) -> Axes:
         """Plot actual vs counterfactual trajectories.
 
         Parameters
@@ -77,10 +79,12 @@ class CounterfactualResult:
         -------
         plt.Axes
         """
+        ax_diff: Axes | None
         if ax is None:
-            fig, axes = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
-            ax_main = axes[0]
-            ax_diff = axes[1]
+            _fig, axes = plt.subplots(2, 1, figsize=(12, 8), sharex=True)  # type: ignore[reportUnknownMemberType]
+            axes_arr = cast("Sequence[Axes]", axes)
+            ax_main: Axes = axes_arr[0]
+            ax_diff = axes_arr[1]
         else:
             ax_main = ax
             ax_diff = None
@@ -88,8 +92,8 @@ class CounterfactualResult:
         x = self.periods if self.periods is not None else np.arange(len(self.actual))
 
         # Main plot: actual vs counterfactual
-        ax_main.plot(x, self.actual, "b-o", label="Actual", linewidth=2, markersize=4)
-        ax_main.plot(
+        ax_main.plot(x, self.actual, "b-o", label="Actual", linewidth=2, markersize=4)  # type: ignore[reportUnknownMemberType]
+        ax_main.plot(  # type: ignore[reportUnknownMemberType]
             x,
             self.counterfactual,
             "r--s",
@@ -97,19 +101,19 @@ class CounterfactualResult:
             linewidth=2,
             markersize=4,
         )
-        ax_main.set_ylabel(self.target)
-        ax_main.set_title(title or f"Counterfactual Analysis: {self.target}")
-        ax_main.legend()
-        ax_main.grid(True, alpha=0.3)
+        ax_main.set_ylabel(self.target)  # type: ignore[reportUnknownMemberType]
+        ax_main.set_title(title or f"Counterfactual Analysis: {self.target}")  # type: ignore[reportUnknownMemberType]
+        ax_main.legend()  # type: ignore[reportUnknownMemberType]
+        ax_main.grid(True, alpha=0.3)  # type: ignore[reportUnknownMemberType]
 
         # Difference plot
         if ax_diff is not None:
-            ax_diff.bar(x, self.diff, color="gray", alpha=0.6, label="Difference")
-            ax_diff.axhline(y=0, color="black", linewidth=0.8)
-            ax_diff.set_ylabel("Difference")
-            ax_diff.set_xlabel("Period")
-            ax_diff.legend()
-            ax_diff.grid(True, alpha=0.3)
+            ax_diff.bar(x, self.diff, color="gray", alpha=0.6, label="Difference")  # type: ignore[reportUnknownMemberType]
+            ax_diff.axhline(y=0, color="black", linewidth=0.8)  # type: ignore[reportUnknownMemberType]
+            ax_diff.set_ylabel("Difference")  # type: ignore[reportUnknownMemberType]
+            ax_diff.set_xlabel("Period")  # type: ignore[reportUnknownMemberType]
+            ax_diff.legend()  # type: ignore[reportUnknownMemberType]
+            ax_diff.grid(True, alpha=0.3)  # type: ignore[reportUnknownMemberType]
 
         return ax_main
 
@@ -230,9 +234,11 @@ class Counterfactual:
 
             # Find starting position in full history
             full_index = self._history_df.index
-            start_pos = full_index.get_loc(selected.index[0])
-            if isinstance(start_pos, slice):
-                start_pos = start_pos.start
+            loc = full_index.get_loc(selected.index[0])
+            if isinstance(loc, slice):
+                start_pos = int(loc.start)
+            else:
+                start_pos = int(loc)  # type: ignore[reportArgumentType]
         else:
             # Use the length of counter_path
             n_periods = len(next(iter(counter_path.values())))

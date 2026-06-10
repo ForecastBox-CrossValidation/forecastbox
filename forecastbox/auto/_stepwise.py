@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 
-def _generate_neighbors(
+def _generate_neighbors(  # type: ignore[reportUnusedFunction]
     order: tuple[int, int, int],
     seasonal_order: tuple[int, int, int, int],
     include_constant: bool,
@@ -361,7 +361,7 @@ def _ocsb_test(
     return not needs_seasonal_diff
 
 
-def _determine_d(
+def _determine_d(  # type: ignore[reportUnusedFunction]
     y: NDArray[np.float64],
     max_d: int = 2,
     alpha: float = 0.05,
@@ -401,7 +401,7 @@ def _determine_d(
     return max_d
 
 
-def _determine_seasonal_d(
+def _determine_seasonal_d(  # type: ignore[reportUnusedFunction]
     y: NDArray[np.float64],
     m: int,
     max_d_seasonal: int = 1,

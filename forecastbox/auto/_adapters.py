@@ -15,11 +15,14 @@ from numpy.typing import NDArray
 
 from forecastbox.core.forecast import Forecast
 
+chronobox: Any = None
 try:
-    import chronobox
-    HAS_CHRONOBOX = True
+    import chronobox as _chronobox
+
+    chronobox = _chronobox
+    HAS_CHRONOBOX: bool = True
 except ImportError:
-    HAS_CHRONOBOX = False
+    HAS_CHRONOBOX = False  # type: ignore[reportConstantRedefinition]
 
 
 class ARIMAAdapter:
@@ -64,12 +67,13 @@ class ARIMAAdapter:
             Fitted adapter (self).
         """
         fit_kwargs = {**self._kwargs, **kwargs}
+        if self.seasonal_order is not None:
+            fit_kwargs["seasonal_order"] = self.seasonal_order
         self._model = chronobox.ARIMA(
             order=self.order,
-            seasonal_order=self.seasonal_order,
             **fit_kwargs,
         )
-        self._model.fit(y)
+        self._model = self._model.fit(y)
         self._fitted = True
         return self
 
@@ -93,7 +97,7 @@ class ARIMAAdapter:
             raise RuntimeError(msg)
         result = self._model.forecast(h)
         return Forecast(
-            point=np.asarray(result.point, dtype=np.float64),
+            point=np.asarray(result["forecast"], dtype=np.float64),
             model_name=f"ARIMA{self.order}",
             horizon=h,
         )
@@ -145,7 +149,7 @@ class ETSAdapter:
             seasonal_period=self.seasonal_period,
             **fit_kwargs,
         )
-        self._model.fit(y)
+        self._model = self._model.fit(y)
         self._fitted = True
         return self
 
@@ -156,7 +160,7 @@ class ETSAdapter:
             raise RuntimeError(msg)
         result = self._model.forecast(h)
         return Forecast(
-            point=np.asarray(result.point, dtype=np.float64),
+            point=np.asarray(result, dtype=np.float64),
             model_name=f"ETS({self.error},{self.trend},{self.seasonal})",
             horizon=h,
         )
@@ -186,7 +190,7 @@ class VARAdapter:
         """Fit the VAR model via chronobox."""
         fit_kwargs = {**self._kwargs, **kwargs}
         self._model = chronobox.VAR(maxlags=self.maxlags, **fit_kwargs)
-        self._model.fit(y)
+        self._model = self._model.fit(y)
         self._fitted = True
         return self
 
@@ -197,7 +201,7 @@ class VARAdapter:
             raise RuntimeError(msg)
         result = self._model.forecast(h)
         return Forecast(
-            point=np.asarray(result.point, dtype=np.float64),
+            point=np.asarray(result, dtype=np.float64),
             model_name=f"VAR({self.maxlags})",
             horizon=h,
         )
@@ -209,7 +213,7 @@ class ThetaAdapter:
     Parameters
     ----------
     **kwargs : Any
-        Additional arguments passed to chronobox.Theta.
+        Additional arguments passed to chronobox.ThetaMethod.
     """
 
     def __init__(self, **kwargs: Any) -> None:
@@ -223,8 +227,8 @@ class ThetaAdapter:
     def fit(self, y: pd.Series | NDArray[np.float64], **kwargs: Any) -> ThetaAdapter:
         """Fit the Theta model via chronobox."""
         fit_kwargs = {**self._kwargs, **kwargs}
-        self._model = chronobox.Theta(**fit_kwargs)
-        self._model.fit(y)
+        self._model = chronobox.ThetaMethod(**fit_kwargs)
+        self._model = self._model.fit(y)
         self._fitted = True
         return self
 
@@ -235,7 +239,7 @@ class ThetaAdapter:
             raise RuntimeError(msg)
         result = self._model.forecast(h)
         return Forecast(
-            point=np.asarray(result.point, dtype=np.float64),
+            point=np.asarray(result, dtype=np.float64),
             model_name="Theta",
             horizon=h,
         )

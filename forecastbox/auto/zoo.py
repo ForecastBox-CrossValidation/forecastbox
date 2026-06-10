@@ -57,7 +57,7 @@ class ModelEntry:
 
     name: str
     model_class: type
-    default_params: dict[str, Any] = field(default_factory=dict)
+    default_params: dict[str, Any] = field(default_factory=lambda: {})
     family: str = "custom"
     description: str = ""
 

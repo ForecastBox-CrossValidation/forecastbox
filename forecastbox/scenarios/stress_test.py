@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.axes import Axes
 from numpy.typing import NDArray
 
 if TYPE_CHECKING:
@@ -122,9 +123,9 @@ class StressResult:
     def plot_impact(
         self,
         variable: str,
-        ax: plt.Axes | None = None,
+        ax: Axes | None = None,
         title: str | None = None,
-    ) -> plt.Axes:
+    ) -> Axes:
         """Plot the impact (stressed - baseline) for a variable.
 
         Parameters
@@ -141,7 +142,7 @@ class StressResult:
         plt.Axes
         """
         if ax is None:
-            _, ax = plt.subplots(figsize=(12, 6))
+            _, ax = plt.subplots(figsize=(12, 6))  # type: ignore[reportUnknownMemberType]
 
         if variable not in self.impact:
             msg = f"Unknown variable '{variable}'. Available: {list(self.impact.keys())}"
@@ -150,22 +151,22 @@ class StressResult:
         x = np.arange(1, self.steps + 1)
         impacts = self.impact[variable]
 
-        ax.bar(x, impacts, color="red", alpha=0.6, label="Impact")
-        ax.axhline(y=0, color="black", linewidth=0.8)
-        ax.set_xlabel("Horizon")
-        ax.set_ylabel(f"Impact on {variable}")
-        ax.set_title(title or f"Stress Test Impact: {variable}")
-        ax.legend()
-        ax.grid(True, alpha=0.3)
+        ax.bar(x, impacts, color="red", alpha=0.6, label="Impact")  # type: ignore[reportUnknownMemberType]
+        ax.axhline(y=0, color="black", linewidth=0.8)  # type: ignore[reportUnknownMemberType]
+        ax.set_xlabel("Horizon")  # type: ignore[reportUnknownMemberType]
+        ax.set_ylabel(f"Impact on {variable}")  # type: ignore[reportUnknownMemberType]
+        ax.set_title(title or f"Stress Test Impact: {variable}")  # type: ignore[reportUnknownMemberType]
+        ax.legend()  # type: ignore[reportUnknownMemberType]
+        ax.grid(True, alpha=0.3)  # type: ignore[reportUnknownMemberType]
 
         return ax
 
     def plot_comparison(
         self,
         variable: str,
-        ax: plt.Axes | None = None,
+        ax: Axes | None = None,
         title: str | None = None,
-    ) -> plt.Axes:
+    ) -> Axes:
         """Plot baseline vs stressed forecasts.
 
         Parameters
@@ -182,19 +183,19 @@ class StressResult:
         plt.Axes
         """
         if ax is None:
-            _, ax = plt.subplots(figsize=(12, 6))
+            _, ax = plt.subplots(figsize=(12, 6))  # type: ignore[reportUnknownMemberType]
 
         x = np.arange(1, self.steps + 1)
         base = self.baseline[variable].point
         stress = self.stressed[variable].point
 
-        ax.plot(x, base, "b-o", label="Baseline", linewidth=2, markersize=4)
-        ax.plot(x, stress, "r-s", label="Stressed", linewidth=2, markersize=4)
+        ax.plot(x, base, "b-o", label="Baseline", linewidth=2, markersize=4)  # type: ignore[reportUnknownMemberType]
+        ax.plot(x, stress, "r-s", label="Stressed", linewidth=2, markersize=4)  # type: ignore[reportUnknownMemberType]
 
         # Show intervals for stressed if available
         stressed_fc = self.stressed[variable]
         if stressed_fc.lower_95 is not None and stressed_fc.upper_95 is not None:
-            ax.fill_between(
+            ax.fill_between(  # type: ignore[reportUnknownMemberType]
                 x,
                 stressed_fc.lower_95,
                 stressed_fc.upper_95,
@@ -202,11 +203,11 @@ class StressResult:
                 color="red",
             )
 
-        ax.set_xlabel("Horizon")
-        ax.set_ylabel(variable)
-        ax.set_title(title or f"Stress Test: {variable}")
-        ax.legend()
-        ax.grid(True, alpha=0.3)
+        ax.set_xlabel("Horizon")  # type: ignore[reportUnknownMemberType]
+        ax.set_ylabel(variable)  # type: ignore[reportUnknownMemberType]
+        ax.set_title(title or f"Stress Test: {variable}")  # type: ignore[reportUnknownMemberType]
+        ax.legend()  # type: ignore[reportUnknownMemberType]
+        ax.grid(True, alpha=0.3)  # type: ignore[reportUnknownMemberType]
 
         return ax
 

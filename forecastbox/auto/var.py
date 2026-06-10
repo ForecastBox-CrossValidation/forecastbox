@@ -50,7 +50,7 @@ logger = get_logger("auto.var")
 def _try_import_var() -> Any:
     """Try to import statsmodels VAR."""
     try:
-        from statsmodels.tsa.api import VAR
+        from statsmodels.tsa.api import VAR  # type: ignore[reportMissingTypeStubs]
 
         return VAR
     except ImportError:
@@ -518,7 +518,7 @@ class AutoVAR:
         AutoVARResult
             Result with selected lag, variables, and fitted model.
         """
-        if not isinstance(data, pd.DataFrame):
+        if not isinstance(data, pd.DataFrame):  # type: ignore[reportUnnecessaryIsInstance]
             msg = (
                 f"data must be a pandas DataFrame, got {type(data).__name__}"
             )

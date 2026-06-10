@@ -7,6 +7,7 @@ from datetime import date, timedelta
 from typing import Any
 
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 import numpy as np
 import pandas as pd
 
@@ -256,7 +257,7 @@ class RealTimeDataManager:
                 continue
 
             series = self._data[name]
-            mask = []
+            mask: list[bool] = []
             for obs_date in series.index:
                 obs_d = pd.Timestamp(obs_date).date()
                 end_period = _end_of_period(obs_d, info.frequency)
@@ -394,8 +395,8 @@ class RealTimeDataManager:
     def plot_ragged_edge(
         self,
         reference_date: str | date | pd.Timestamp,
-        ax: plt.Axes | None = None,
-    ) -> plt.Axes:
+        ax: Axes | None = None,
+    ) -> Axes:
         """Plot the ragged edge showing data availability across series.
 
         Parameters
@@ -411,12 +412,12 @@ class RealTimeDataManager:
             The matplotlib Axes object.
         """
         if ax is None:
-            _, ax = plt.subplots(figsize=(14, max(4, len(self._series) * 0.6)))
+            _, ax = plt.subplots(figsize=(14, max(4, len(self._series) * 0.6)))  # type: ignore[reportUnknownMemberType]
 
         missing = self.get_missing_pattern(reference_date)
 
         if missing.empty:
-            ax.text(
+            ax.text(  # type: ignore[reportUnknownMemberType]
                 0.5, 0.5, "No data available",
                 ha="center", va="center", transform=ax.transAxes,
             )
@@ -431,24 +432,24 @@ class RealTimeDataManager:
             for j, period in enumerate(missing.index):
                 color = "green" if missing.loc[period, name] else "red"
                 alpha = 0.7 if missing.loc[period, name] else 0.3
-                ax.barh(
+                ax.barh(  # type: ignore[reportUnknownMemberType]
                     i, 1, left=j, height=0.8, color=color, alpha=alpha,
                     edgecolor="white", linewidth=0.5,
                 )
 
-        ax.set_yticks(range(n_series))
-        ax.set_yticklabels(series_names)
+        ax.set_yticks(range(n_series))  # type: ignore[reportUnknownMemberType]
+        ax.set_yticklabels(series_names)  # type: ignore[reportUnknownMemberType]
 
         # X-axis: show a subset of dates
         if n_periods > 0:
             step = max(1, n_periods // 8)
             tick_positions = list(range(0, n_periods, step))
             tick_labels = [str(missing.index[p])[:10] for p in tick_positions]
-            ax.set_xticks(tick_positions)
-            ax.set_xticklabels(tick_labels, rotation=45, ha="right")
+            ax.set_xticks(tick_positions)  # type: ignore[reportUnknownMemberType]
+            ax.set_xticklabels(tick_labels, rotation=45, ha="right")  # type: ignore[reportUnknownMemberType]
 
-        ax.set_title(f"Ragged Edge (reference: {reference_date})")
-        ax.set_xlabel("Period")
+        ax.set_title(f"Ragged Edge (reference: {reference_date})")  # type: ignore[reportUnknownMemberType]
+        ax.set_xlabel("Period")  # type: ignore[reportUnknownMemberType]
 
         # Legend
         from matplotlib.patches import Patch
@@ -457,7 +458,7 @@ class RealTimeDataManager:
             Patch(facecolor="green", alpha=0.7, label="Available"),
             Patch(facecolor="red", alpha=0.3, label="Missing"),
         ]
-        ax.legend(handles=legend_elements, loc="upper right")
+        ax.legend(handles=legend_elements, loc="upper right")  # type: ignore[reportUnknownMemberType]
 
         plt.tight_layout()
         return ax
@@ -465,8 +466,8 @@ class RealTimeDataManager:
     def plot_release_calendar(
         self,
         period: str | tuple[str, str] = "2024-Q1",
-        ax: plt.Axes | None = None,
-    ) -> plt.Axes:
+        ax: Axes | None = None,
+    ) -> Axes:
         """Plot a calendar view of publication dates.
 
         Parameters
@@ -482,7 +483,7 @@ class RealTimeDataManager:
             The matplotlib Axes object.
         """
         if ax is None:
-            _, ax = plt.subplots(figsize=(14, max(4, len(self._series) * 0.6)))
+            _, ax = plt.subplots(figsize=(14, max(4, len(self._series) * 0.6)))  # type: ignore[reportUnknownMemberType]
 
         if isinstance(period, str):
             # Parse quarter string
@@ -500,7 +501,7 @@ class RealTimeDataManager:
         events = self.simulate_publication(start, end)
 
         if not events:
-            ax.text(
+            ax.text(  # type: ignore[reportUnknownMemberType]
                 0.5, 0.5, "No publications in period",
                 ha="center", va="center", transform=ax.transAxes,
             )
@@ -509,20 +510,22 @@ class RealTimeDataManager:
         # Plot events on timeline
         series_names = sorted(set(e["series"] for e in events))
         series_idx = {name: i for i, name in enumerate(series_names)}
-        colors = plt.cm.Set3(np.linspace(0, 1, len(series_names)))
+        colors: np.ndarray[Any, np.dtype[np.float64]] = plt.cm.Set3(  # type: ignore[reportAttributeAccessIssue, reportUnknownMemberType]
+            np.linspace(0, 1, len(series_names))
+        )
 
         for event in events:
             idx = series_idx[event["series"]]
             day_offset = (event["date"] - start).days
-            ax.barh(
+            ax.barh(  # type: ignore[reportUnknownMemberType]
                 idx, 1, left=day_offset, height=0.6,
                 color=colors[idx], edgecolor="black", linewidth=0.5,
             )
 
-        ax.set_yticks(range(len(series_names)))
-        ax.set_yticklabels(series_names)
-        ax.set_xlabel("Days from start")
-        ax.set_title(f"Release Calendar ({start} to {end})")
+        ax.set_yticks(range(len(series_names)))  # type: ignore[reportUnknownMemberType]
+        ax.set_yticklabels(series_names)  # type: ignore[reportUnknownMemberType]
+        ax.set_xlabel("Days from start")  # type: ignore[reportUnknownMemberType]
+        ax.set_title(f"Release Calendar ({start} to {end})")  # type: ignore[reportUnknownMemberType]
 
         plt.tight_layout()
         return ax

@@ -19,7 +19,7 @@ _TEMPLATE_MAP: dict[str, str] = {
 def _has_jinja2() -> bool:
     """Check if Jinja2 is available."""
     try:
-        import jinja2  # noqa: F401
+        import jinja2  # noqa: F401  # type: ignore[reportUnusedImport]
 
         return True
     except ImportError:

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 
 class MarkdownTransformer:
@@ -78,10 +78,12 @@ class MarkdownTransformer:
 
         # Models list
         if "models" in section and isinstance(section["models"], list):
-            for model in section["models"]:
+            models = cast("list[Any]", section["models"])
+            for model in models:
                 if isinstance(model, dict):
-                    name = model.get("name", "Unknown")
-                    parts.append(f"- **{name}** (horizon={model.get('horizon', '?')})")
+                    model_dict = cast("dict[str, Any]", model)
+                    name = model_dict.get("name", "Unknown")
+                    parts.append(f"- **{name}** (horizon={model_dict.get('horizon', '?')})")
             parts.append("")
 
         # Weights
@@ -105,7 +107,12 @@ class MarkdownTransformer:
 
         if isinstance(data[first_key], dict):
             cols = list(data.keys())
-            rows = sorted(set().union(*(d.keys() for d in data.values() if isinstance(d, dict))))
+            row_keys: set[Any] = set()
+            for d in data.values():
+                if isinstance(d, dict):
+                    d_dict = cast("dict[Any, Any]", d)
+                    row_keys.update(d_dict.keys())
+            rows: list[Any] = sorted(row_keys)
 
             header = "| Model | " + " | ".join(cols) + " |"
             separator = "|:---|" + "|".join(["---:" for _ in cols]) + "|"

@@ -31,10 +31,10 @@ from numpy.typing import NDArray
 
 from forecastbox._logging import get_logger
 from forecastbox.auto._stepwise import (
-    _determine_d,
-    _determine_seasonal_d,
-    _generate_neighbors,
-    _is_valid_order,
+    _determine_d,  # type: ignore[reportPrivateUsage]
+    _determine_seasonal_d,  # type: ignore[reportPrivateUsage]
+    _generate_neighbors,  # type: ignore[reportPrivateUsage]
+    _is_valid_order,  # type: ignore[reportPrivateUsage]
 )
 from forecastbox.core.forecast import Forecast
 
@@ -44,7 +44,9 @@ logger = get_logger("auto.arima")
 def _try_import_statsmodels() -> Any:
     """Try to import statsmodels SARIMAX."""
     try:
-        from statsmodels.tsa.statespace.sarimax import SARIMAX
+        from statsmodels.tsa.statespace.sarimax import (  # type: ignore[reportMissingTypeStubs]
+            SARIMAX,
+        )
 
         return SARIMAX
     except ImportError:
@@ -313,7 +315,10 @@ class AutoARIMA:
         self.max_Q = max_Q
         self.max_order = max_order
         self.seasonal = seasonal
-        self.m = m if seasonal else 1
+        # Treat m<=1 as non-seasonal. SARIMAX rejects a seasonal period s=1
+        # ("Seasonal periodicity must be greater than 1."), so normalize to 0
+        # and only do a seasonal search when seasonal=True and m>1.
+        self.m = m if (seasonal and m > 1) else 0
         self.stepwise = stepwise
         self.ic = ic
         self.trace = trace
@@ -398,8 +403,8 @@ class AutoARIMA:
                 model=None,
             )
 
-        p, d, q = order
-        big_p, big_d, big_q, m = seasonal_order
+        _p, d, _q = order
+        _big_p, big_d, _big_q, m = seasonal_order
 
         # Determine trend parameter
         if include_constant:
@@ -453,6 +458,30 @@ class AutoARIMA:
                 converged=False,
                 model=None,
             )
+
+    def _fit_fallback(self, y: NDArray[np.float64], d: int) -> _CandidateResult:
+        """Fit a simple, guaranteed-fittable fallback model.
+
+        Used when no candidate in the search converged, so that ``fit`` always
+        produces a usable model instead of returning ``model=None`` (which would
+        make ``forecast`` raise a generic 'No fitted model available' error).
+
+        Tries non-seasonal ``(1, d, 0)`` then ``(0, d, 0)``. If both somehow
+        fail, raises a clear, actionable error.
+        """
+        for order in [(1, d, 0), (0, d, 0)]:
+            candidate = self._fit_candidate(y, order, (0, 0, 0, 0), include_constant=False)
+            if candidate.model is not None:
+                if self.trace:
+                    print(f"  Fallback model ARIMA{order} fitted (all candidates failed).")
+                return candidate
+
+        msg = (
+            "AutoARIMA could not fit any model, including the simple "
+            f"(0,{d},0) fallback. Check the input series for NaNs, constant "
+            "values, or insufficient length."
+        )
+        raise RuntimeError(msg)
 
     def _stepwise_search(
         self,
@@ -524,16 +553,17 @@ class AutoARIMA:
                 ((0, d, 1), (0, big_d, 1, m), True),
             ]
         else:
+            # Non-seasonal: s must be 0 (not m), otherwise SARIMAX rejects s=1.
             initial_models = [
-                ((2, d, 2), (0, 0, 0, m), True),
-                ((0, d, 0), (0, 0, 0, m), True),
-                ((1, d, 0), (0, 0, 0, m), True),
-                ((0, d, 1), (0, 0, 0, m), True),
+                ((2, d, 2), (0, 0, 0, 0), True),
+                ((0, d, 0), (0, 0, 0, 0), True),
+                ((1, d, 0), (0, 0, 0, 0), True),
+                ((0, d, 1), (0, 0, 0, 0), True),
             ]
 
         for order, seas_order, const in initial_models:
             p_val, d_val, q_val = order
-            big_p_val, big_d_val, big_q_val, m_val = seas_order
+            big_p_val, big_d_val, big_q_val, _m_val = seas_order
             if _is_valid_order(
                 p_val, d_val, q_val, big_p_val, big_d_val, big_q_val,
                 self.max_p, self.max_q, self.max_P, self.max_Q, self.max_order,
@@ -567,6 +597,11 @@ class AutoARIMA:
                 if result is not None and result.ic_value < best.ic_value:
                     best = result
                     improved = True
+
+        # Guarantee a fitted model: if every candidate failed, fall back to a
+        # simple guaranteed-fittable order so forecast() never sees model=None.
+        if best.model is None:
+            best = self._fit_fallback(y, d)
 
         # Build all_models DataFrame
         all_models_df = self._build_all_models_df(all_candidates)
@@ -637,7 +672,10 @@ class AutoARIMA:
                 continue
 
             order = (p, d, q)
-            seasonal_order = (big_p, big_d, big_q, m)
+            # Use s=0 in the non-seasonal branch (m is already 0 there);
+            # SARIMAX rejects a seasonal period of 1.
+            seasonal_s = m if (self.seasonal and m > 1) else 0
+            seasonal_order = (big_p, big_d, big_q, seasonal_s)
 
             for include_constant in [True, False]:
                 candidate = self._fit_candidate(y, order, seasonal_order, include_constant)
@@ -657,6 +695,12 @@ class AutoARIMA:
             raise RuntimeError(msg)
 
         best = min(all_candidates, key=lambda c: c.ic_value)
+
+        # Guarantee a fitted model: if every candidate failed, fall back to a
+        # simple guaranteed-fittable order so forecast() never sees model=None.
+        if best.model is None:
+            best = self._fit_fallback(y, d)
+
         all_models_df = self._build_all_models_df(all_candidates)
 
         if self.trace:
@@ -680,7 +724,7 @@ class AutoARIMA:
     @staticmethod
     def _build_all_models_df(candidates: list[_CandidateResult]) -> pd.DataFrame:
         """Build a sorted DataFrame of all candidate results."""
-        all_models_data = []
+        all_models_data: list[dict[str, Any]] = []
         for c in candidates:
             p_val, d_val, q_val = c.order
             big_p_val, big_d_val, big_q_val, m_val = c.seasonal_order

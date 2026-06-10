@@ -129,23 +129,25 @@ class BridgeEquation:
             if len(valid) == 0:
                 continue
 
+            valid_values = np.asarray(valid.values, dtype=float)
+
             if method == "ar1":
                 # Fit AR(1) on available data
                 if len(valid) >= 3:
-                    y = valid.values[1:]
-                    x = valid.values[:-1]
+                    y = valid_values[1:]
+                    x = valid_values[:-1]
                     x_with_const = np.column_stack([np.ones(len(x)), x])
                     try:
                         params = np.linalg.lstsq(x_with_const, y, rcond=None)[0]
                     except np.linalg.LinAlgError:
                         params = np.array([0.0, 0.9])
-                    c, phi = params[0], params[1]
-                    phi = np.clip(phi, -0.99, 0.99)
+                    c, phi = float(params[0]), float(params[1])
+                    phi = float(np.clip(phi, -0.99, 0.99))
                 else:
                     c = 0.0
                     phi = 0.9
 
-                last_val = valid.values[-1]
+                last_val = float(valid_values[-1])
                 for idx in series.index:
                     if pd.isna(series[idx]) and idx > valid.index[-1]:
                         new_val = c + phi * last_val
@@ -153,7 +155,7 @@ class BridgeEquation:
                         last_val = new_val
 
             elif method == "last":
-                last_val = valid.values[-1]
+                last_val = float(valid_values[-1])
                 for idx in series.index:
                     if pd.isna(series[idx]) and idx > valid.index[-1]:
                         result.loc[idx, col] = last_val

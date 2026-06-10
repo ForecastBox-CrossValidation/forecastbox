@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 
 class LaTeXTransformer:
@@ -92,9 +92,11 @@ class LaTeXTransformer:
         # Models list
         if "models" in section and isinstance(section["models"], list):
             parts.append(r"\begin{itemize}")
-            for model in section["models"]:
+            models = cast("list[Any]", section["models"])
+            for model in models:
                 if isinstance(model, dict):
-                    name = model.get("name", "Unknown")
+                    model_dict = cast("dict[str, Any]", model)
+                    name = str(model_dict.get("name", "Unknown"))
                     parts.append(f"  \\item \\textbf{{{self._escape(name)}}}")
             parts.append(r"\end{itemize}")
             parts.append("")

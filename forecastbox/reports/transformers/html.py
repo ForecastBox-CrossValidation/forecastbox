@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 
 class HTMLTransformer:
@@ -92,10 +92,12 @@ class HTMLTransformer:
         # Models list
         if "models" in section and isinstance(section["models"], list):
             parts.append("<ul>")
-            for model in section["models"]:
+            models_list = cast("list[Any]", section["models"])
+            for model in models_list:
                 if isinstance(model, dict):
-                    name = model.get("name", "Unknown")
-                    horizon = model.get('horizon', '?')
+                    model_dict = cast("dict[str, Any]", model)
+                    name = model_dict.get("name", "Unknown")
+                    horizon = model_dict.get("horizon", "?")
                     parts.append(
                         f"<li><strong>{name}</strong>"
                         f" (horizon={horizon})</li>"
@@ -122,8 +124,9 @@ class HTMLTransformer:
             for model_name, diag in section["diagnostics"].items():
                 parts.append(f"<h3>{model_name}</h3>")
                 if isinstance(diag, dict):
+                    diag_dict = cast("dict[str, Any]", diag)
                     parts.append("<table>")
-                    for k, v in diag.items():
+                    for k, v in diag_dict.items():
                         parts.append(f"<tr><td>{k}</td><td>{v:.4f}</td></tr>")
                     parts.append("</table>")
 
@@ -140,7 +143,12 @@ class HTMLTransformer:
         # Get columns and rows
         first_key = next(iter(data.keys()))
         if isinstance(data[first_key], dict):
-            rows = sorted(set().union(*(d.keys() for d in data.values() if isinstance(d, dict))))
+            row_keys: set[str] = set()
+            for d in data.values():
+                if isinstance(d, dict):
+                    d_dict = cast("dict[str, Any]", d)
+                    row_keys.update(d_dict.keys())
+            rows: list[str] = sorted(row_keys)
             parts.append("<tr><th>Model</th>")
             for col in data:
                 parts.append(f"<th>{col}</th>")
@@ -149,7 +157,12 @@ class HTMLTransformer:
             for row in rows:
                 parts.append(f"<tr><td>{row}</td>")
                 for col in data:
-                    val = data[col].get(row, "N/A") if isinstance(data[col], dict) else "N/A"
+                    col_val = data[col]
+                    val: Any = (
+                        cast("dict[str, Any]", col_val).get(row, "N/A")
+                        if isinstance(col_val, dict)
+                        else "N/A"
+                    )
                     if isinstance(val, float):
                         parts.append(f"<td>{val:.4f}</td>")
                     else:

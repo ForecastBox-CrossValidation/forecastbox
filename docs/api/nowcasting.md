@@ -531,6 +531,6 @@ for date in vm.list_vintages():
 
 - [Nowcasting Theory](../theory/nowcasting-theory.md) — DFM, bridge equations, and nowcasting foundations
 - [MIDAS Theory](../theory/midas-theory.md) — Mixed Data Sampling mathematical framework
-- [News Decomposition Theory](../theory/news_decomposition.md) — News decomposition derivation
+- [News Decomposition Theory](../theory/nowcasting-theory.md) — News decomposition derivation
 - [Nowcasting User Guide](../user-guide/nowcasting/index.md) — Tutorials and worked examples
 - [Core API](core.md) — `Forecast` and `DataVintage` data structures

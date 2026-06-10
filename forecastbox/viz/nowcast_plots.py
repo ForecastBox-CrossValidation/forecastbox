@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 
 from forecastbox.viz._style import NODESECON_COLORS, format_axis
 
@@ -12,9 +14,9 @@ def nowcast_plot(
     nowcasts: dict[str, float] | pd.Series,
     actual: float | None = None,
     vintages: list[str] | None = None,
-    ax: plt.Axes | None = None,
+    ax: Axes | None = None,
     title: str | None = None,
-) -> plt.Axes:
+) -> Axes:
     """Plot nowcast evolution by vintage.
 
     Parameters
@@ -36,20 +38,21 @@ def nowcast_plot(
         The matplotlib Axes.
     """
     if ax is None:
-        _, ax = plt.subplots(figsize=(12, 6))
+        subplot_result: tuple[Figure, Axes] = plt.subplots(figsize=(12, 6))  # type: ignore[reportUnknownMemberType]
+        ax = subplot_result[1]
 
     nowcast_series = pd.Series(nowcasts) if isinstance(nowcasts, dict) else nowcasts
 
     # Plot nowcast evolution
-    ax.plot(
-        range(len(nowcast_series)), nowcast_series.values,
+    ax.plot(  # type: ignore[reportUnknownMemberType]
+        range(len(nowcast_series)), nowcast_series.to_numpy(),
         color=NODESECON_COLORS["primary"], marker="o",
         linewidth=2, markersize=6, label="Nowcast",
     )
 
     # Set x labels
-    ax.set_xticks(range(len(nowcast_series)))
-    ax.set_xticklabels(
+    ax.set_xticks(range(len(nowcast_series)))  # type: ignore[reportUnknownMemberType]
+    ax.set_xticklabels(  # type: ignore[reportUnknownMemberType]
         [str(v) for v in nowcast_series.index],
         rotation=45, ha="right",
     )
@@ -59,14 +62,14 @@ def nowcast_plot(
         for v in vintages:
             if v in nowcast_series.index:
                 idx = list(nowcast_series.index).index(v)
-                ax.plot(
+                ax.plot(  # type: ignore[reportUnknownMemberType]
                     idx, nowcast_series[v], "s",
                     color=NODESECON_COLORS["accent"], markersize=10, zorder=5,
                 )
 
     # Plot actual
     if actual is not None:
-        ax.axhline(
+        ax.axhline(  # type: ignore[reportUnknownMemberType]
             y=actual, color=NODESECON_COLORS["danger"],
             linestyle="--", linewidth=2, label=f"Actual: {actual:.2f}",
         )

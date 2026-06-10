@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -13,14 +13,14 @@ from forecastbox.core.forecast import Forecast
 
 def _check_sklearn() -> None:
     """Check if scikit-learn is installed."""
-    try:
-        import sklearn  # noqa: F401
-    except ImportError:
+    import importlib.util
+
+    if importlib.util.find_spec("sklearn") is None:
         msg = (
             "StackingCombiner requires scikit-learn. "
             "Install it with: pip install scikit-learn"
         )
-        raise ImportError(msg) from None
+        raise ImportError(msg)
 
 
 def _get_meta_learner(name: str) -> Any:
@@ -39,19 +39,23 @@ def _get_meta_learner(name: str) -> Any:
     _check_sklearn()
 
     if name == "ridge":
-        from sklearn.linear_model import Ridge
+        from sklearn.linear_model import Ridge  # type: ignore[import-untyped]
 
         return Ridge(alpha=1.0)
     elif name == "lasso":
-        from sklearn.linear_model import Lasso
+        from sklearn.linear_model import Lasso  # type: ignore[import-untyped]
 
         return Lasso(alpha=0.01, max_iter=10000)
     elif name == "rf":
-        from sklearn.ensemble import RandomForestRegressor
+        from sklearn.ensemble import (  # type: ignore[import-untyped]
+            RandomForestRegressor,
+        )
 
         return RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1)
     elif name == "gbm":
-        from sklearn.ensemble import GradientBoostingRegressor
+        from sklearn.ensemble import (  # type: ignore[import-untyped]
+            GradientBoostingRegressor,
+        )
 
         return GradientBoostingRegressor(n_estimators=100, random_state=42)
     else:
@@ -145,9 +149,9 @@ class StackingCombiner(BaseCombiner):
         if isinstance(self.meta_learner_param, str):
             self.meta_model_ = _get_meta_learner(self.meta_learner_param)
         else:
-            from sklearn.base import clone
+            from sklearn.base import clone  # type: ignore[import-untyped]
 
-            self.meta_model_ = clone(self.meta_learner_param)
+            self.meta_model_ = cast(Any, clone(self.meta_learner_param))
 
         if self.use_cv_predictions and t >= self.cv_folds * 2:
             # Out-of-fold predictions
@@ -168,12 +172,13 @@ class StackingCombiner(BaseCombiner):
                 x_train = x[train_mask]
                 y_train = actual[train_mask]
 
+                fold_model: Any
                 if isinstance(self.meta_learner_param, str):
                     fold_model = _get_meta_learner(self.meta_learner_param)
                 else:
-                    from sklearn.base import clone
+                    from sklearn.base import clone  # type: ignore[import-untyped]
 
-                    fold_model = clone(self.meta_learner_param)
+                    fold_model = cast(Any, clone(self.meta_learner_param))
 
                 fold_model.fit(x_train, y_train)
 
@@ -196,10 +201,11 @@ class StackingCombiner(BaseCombiner):
             abs_coef = np.abs(coef)
             total = np.sum(abs_coef)
             if total > 0:
-                self.weights_ = abs_coef / total
+                weights = abs_coef / total
             else:
-                self.weights_ = np.full(len(coef), 1.0 / len(coef))
-            self.feature_importances_ = self.weights_.copy()
+                weights = np.full(len(coef), 1.0 / len(coef))
+            self.weights_ = weights
+            self.feature_importances_ = weights.copy()
 
         elif hasattr(self.meta_model_, "feature_importances_"):
             fi = np.asarray(
@@ -207,10 +213,11 @@ class StackingCombiner(BaseCombiner):
             )
             total = np.sum(fi)
             if total > 0:
-                self.weights_ = fi / total
+                weights = fi / total
             else:
-                self.weights_ = np.full(len(fi), 1.0 / len(fi))
-            self.feature_importances_ = self.weights_.copy()
+                weights = np.full(len(fi), 1.0 / len(fi))
+            self.weights_ = weights
+            self.feature_importances_ = weights.copy()
 
         else:
             # Fallback: equal weights

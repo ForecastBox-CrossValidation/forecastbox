@@ -178,13 +178,17 @@ class AlertSystem:
 
     def _evaluate_rule(self, rule: AlertRule) -> Alert | None:
         """Evaluate a single rule against current monitor state."""
-        pairs = self.monitor._get_matched_pairs()
+        pairs = self.monitor._get_matched_pairs()  # type: ignore[reportPrivateUsage]
         if pairs.empty or len(pairs) < rule.window:
             return None
 
-        errors = pairs["actual"].values - pairs["forecast"].values
+        actual = np.asarray(pairs["actual"].to_numpy(), dtype=np.float64)
+        forecast = np.asarray(pairs["forecast"].to_numpy(), dtype=np.float64)
+        errors: np.ndarray[Any, np.dtype[np.float64]] = actual - forecast
         recent_errors = errors[-rule.window :]
-        historical_errors = errors[: -rule.window] if len(errors) > rule.window else errors
+        historical_errors = (
+            errors[: -rule.window] if len(errors) > rule.window else errors
+        )
 
         current_value: float = 0.0
         triggered = False

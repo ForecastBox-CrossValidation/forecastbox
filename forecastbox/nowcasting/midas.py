@@ -6,9 +6,10 @@ from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.axes import Axes
 import pandas as pd
 from numpy.typing import NDArray
-from scipy.optimize import minimize
+from scipy.optimize import minimize  # type: ignore[reportMissingTypeStubs]
 
 
 class MIDAS:
@@ -231,7 +232,7 @@ class MIDAS:
                 # Find the latest HF observation before/at the target date
                 available = series[series.index <= t_date].dropna()
                 if len(available) >= self.n_lags:
-                    vals = available.values[-self.n_lags:]
+                    vals = available.to_numpy(dtype=np.float64)[-self.n_lags:]
                     x_mat[i, v * self.n_lags : (v + 1) * self.n_lags] = vals[::-1]
 
         return x_mat.astype(np.float64)
@@ -305,12 +306,12 @@ class MIDAS:
 
         # Get target (low frequency, non-NaN)
         target_series = data[self.target].dropna()
-        target_dates = target_series.index
+        target_dates = pd.DatetimeIndex(target_series.index)
 
         # Build high-frequency regressor matrix
         hf_data = data[self.high_freq]
         x_hf = self._build_hf_matrix(hf_data, target_dates)
-        y_lf = target_series.values.astype(np.float64)
+        y_lf = target_series.to_numpy(dtype=np.float64)
 
         # Remove rows with all zeros in X (insufficient data)
         valid = np.any(x_hf != 0, axis=1)
@@ -362,7 +363,7 @@ class MIDAS:
 
         # For multiple HF variables, extract per-variable weights
         n_hf_vars = len(self.high_freq)
-        all_weights = []
+        all_weights: list[NDArray[np.float64]] = []
         for v in range(n_hf_vars):
             w = raw_weights[v * self.n_lags : (v + 1) * self.n_lags]
             total = np.sum(np.abs(w))
@@ -405,7 +406,9 @@ class MIDAS:
         elif self.weight_scheme == "almon":
             theta_init = np.zeros(self.poly_order)
             theta_init[0] = -0.01  # Slight decay
-            bounds = [(None, None), (None, None)] + [(None, None)] * self.poly_order
+            unbounded: tuple[float | None, float | None] = (None, None)
+            bounds = [unbounded, unbounded]
+            bounds.extend(unbounded for _ in range(self.poly_order))
         else:
             msg = f"NLS not supported for scheme: {self.weight_scheme}"
             raise ValueError(msg)
@@ -413,7 +416,7 @@ class MIDAS:
         params_init = np.concatenate([[alpha_init, beta_init], theta_init])
 
         # Optimize
-        result = minimize(
+        result: Any = minimize(  # type: ignore[reportUnknownVariableType]
             self._objective,
             params_init,
             args=(x_hf, y_lf),
@@ -422,9 +425,9 @@ class MIDAS:
             options={"maxiter": 1000, "ftol": 1e-10},
         )
 
-        if not result.success:
+        if not result.success:  # type: ignore[reportUnknownMemberType]
             # Try Nelder-Mead as fallback (no bounds)
-            result = minimize(
+            result = minimize(  # type: ignore[reportUnknownVariableType]
                 self._objective,
                 params_init,
                 args=(x_hf, y_lf),
@@ -432,16 +435,18 @@ class MIDAS:
                 options={"maxiter": 5000, "xatol": 1e-10},
             )
 
-        self._alpha = float(result.x[0])
-        self._beta_coef = float(result.x[1])
-        self._theta = result.x[2:].astype(np.float64)
-        self._weights = self._compute_weights(self._theta)
+        result_x: NDArray[np.float64] = np.asarray(result.x, dtype=np.float64)  # type: ignore[reportUnknownMemberType]
+        self._alpha = float(result_x[0])
+        self._beta_coef = float(result_x[1])
+        theta_est: NDArray[np.float64] = result_x[2:].astype(np.float64)
+        self._theta = theta_est
+        self._weights = self._compute_weights(theta_est)
 
         # Residual variance
         y_hat = self._predict(x_hf)
         residuals_arr = y_lf - y_hat
         n = len(y_lf)
-        n_params = len(result.x)
+        n_params = len(result_x)
         self._sigma2 = float(np.sum(residuals_arr**2) / max(1, n - n_params))
 
     def _predict(self, x_hf: NDArray[np.float64]) -> NDArray[np.float64]:
@@ -508,7 +513,7 @@ class MIDAS:
         for v, var_name in enumerate(self.high_freq):
             series = hf_data[var_name].dropna()
             if len(series) >= self.n_lags:
-                vals = series.values[-self.n_lags:]
+                vals = series.to_numpy(dtype=np.float64)[-self.n_lags:]
                 x_new[v * self.n_lags : (v + 1) * self.n_lags] = vals[::-1]
 
         # Predict
@@ -540,7 +545,7 @@ class MIDAS:
             },
         )
 
-    def plot_weights(self, ax: plt.Axes | None = None) -> plt.Axes:
+    def plot_weights(self, ax: Axes | None = None) -> Axes:
         """Plot the estimated MIDAS weight function.
 
         Parameters
@@ -558,17 +563,17 @@ class MIDAS:
             raise RuntimeError(msg)
 
         if ax is None:
-            _, ax = plt.subplots(figsize=(10, 5))
+            _, ax = plt.subplots(figsize=(10, 5))  # type: ignore[reportUnknownMemberType]
 
         lags = np.arange(self.n_lags)
-        ax.bar(lags, self._weights, color="steelblue", alpha=0.7, edgecolor="black")
-        ax.set_xlabel("Lag (high-frequency periods)")
-        ax.set_ylabel("Weight")
-        ax.set_title(
+        ax.bar(lags, self._weights, color="steelblue", alpha=0.7, edgecolor="black")  # type: ignore[reportUnknownMemberType]
+        ax.set_xlabel("Lag (high-frequency periods)")  # type: ignore[reportUnknownMemberType]
+        ax.set_ylabel("Weight")  # type: ignore[reportUnknownMemberType]
+        ax.set_title(  # type: ignore[reportUnknownMemberType]
             f"MIDAS Weights ({self.weight_scheme.capitalize()}, "
             f"sum={self._weights.sum():.6f})"
         )
-        ax.grid(True, alpha=0.3, axis="y")
+        ax.grid(True, alpha=0.3, axis="y")  # type: ignore[reportUnknownMemberType]
 
         return ax
 

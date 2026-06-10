@@ -5,6 +5,9 @@ from __future__ import annotations
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.axes import Axes
+from matplotlib.container import BarContainer
+from matplotlib.figure import Figure
 
 from forecastbox.pipeline.pipeline import PipelineResults
 from forecastbox.viz._style import format_axis, get_color_palette
@@ -12,9 +15,9 @@ from forecastbox.viz._style import format_axis, get_color_palette
 
 def combination_weights_plot(
     weights: dict[str, float] | pd.Series | pd.DataFrame,
-    ax: plt.Axes | None = None,
+    ax: Axes | None = None,
     title: str | None = None,
-) -> plt.Axes:
+) -> Axes:
     """Plot combination weights as bar chart or stacked bars.
 
     Parameters
@@ -32,29 +35,30 @@ def combination_weights_plot(
         The matplotlib Axes.
     """
     if ax is None:
-        _, ax = plt.subplots(figsize=(10, 6))
+        _, ax = plt.subplots(figsize=(10, 6))  # type: ignore[reportUnknownMemberType]
 
     if isinstance(weights, dict):
         weights = pd.Series(weights)
 
     if isinstance(weights, pd.Series):
         colors = get_color_palette(len(weights))
-        bars = ax.bar(range(len(weights)), weights.values, color=colors)
-        ax.set_xticks(range(len(weights)))
-        ax.set_xticklabels([str(k) for k in weights.index], rotation=45, ha="right")
+        bars: BarContainer = ax.bar(range(len(weights)), weights.to_numpy(), color=colors)  # type: ignore[reportUnknownMemberType]
+        ax.set_xticks(range(len(weights)))  # type: ignore[reportUnknownMemberType]
+        ax.set_xticklabels([str(k) for k in weights.index], rotation=45, ha="right")  # type: ignore[reportUnknownMemberType]
 
-        for bar in bars:
-            height = bar.get_height()
-            ax.text(
-                bar.get_x() + bar.get_width() / 2.0, height,
+        for bar in bars.patches:
+            height: float = bar.get_height()
+            x_pos: float = bar.get_x() + bar.get_width() / 2.0
+            ax.text(  # type: ignore[reportUnknownMemberType]
+                x_pos, height,
                 f"{height:.3f}", ha="center", va="bottom", fontsize=9,
             )
 
-    elif isinstance(weights, pd.DataFrame):
+    else:
         # Time-varying weights - stacked bar
         colors = get_color_palette(len(weights.columns))
-        weights.plot(kind="bar", stacked=True, ax=ax, color=colors)
-        ax.set_xticklabels(
+        weights.plot(kind="bar", stacked=True, ax=ax, color=colors)  # type: ignore[reportUnknownMemberType]
+        ax.set_xticklabels(  # type: ignore[reportUnknownMemberType]
             [str(idx) for idx in weights.index], rotation=45, ha="right",
         )
 
@@ -64,8 +68,8 @@ def combination_weights_plot(
 
 def pipeline_dashboard(
     results: PipelineResults,
-    fig: plt.Figure | None = None,
-) -> plt.Figure:
+    fig: Figure | None = None,
+) -> Figure:
     """Create dashboard summary of pipeline results (2x2 grid).
 
     Parameters
@@ -81,7 +85,7 @@ def pipeline_dashboard(
         The matplotlib Figure.
     """
     if fig is None:
-        fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+        fig, axes = plt.subplots(2, 2, figsize=(16, 12))  # type: ignore[reportUnknownMemberType]
     else:
         axes = fig.subplots(2, 2)
 
@@ -159,7 +163,7 @@ def pipeline_dashboard(
             transform=ax4.transAxes,
         )
 
-    fig.suptitle("Pipeline Dashboard", fontsize=18, fontweight="bold", y=1.02)
+    fig.suptitle("Pipeline Dashboard", fontsize=18, fontweight="bold", y=1.02)  # type: ignore[reportUnknownMemberType]
     fig.tight_layout()
 
     return fig

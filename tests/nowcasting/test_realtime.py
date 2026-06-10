@@ -107,7 +107,7 @@ class TestRealTimeDataManager:
 
         assert not pattern.empty
         # Should be a boolean DataFrame
-        assert pattern.dtypes.apply(lambda x: x is bool).all()
+        assert pattern.dtypes.apply(pd.api.types.is_bool_dtype).all()
 
     def test_simulate_publication(self, rtdm_with_data: RealTimeDataManager) -> None:
         """Test simulation respects calendar and lags."""

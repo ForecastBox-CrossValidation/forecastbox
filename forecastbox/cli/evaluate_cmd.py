@@ -37,7 +37,7 @@ logger = get_logger("cli.evaluate")
     "--metrics",
     "metric_names",
     multiple=True,
-    type=click.Choice(["mae", "rmse", "mape", "mase", "crps"]),
+    type=click.Choice(["mae", "rmse", "mape"]),
     default=("mae", "rmse", "mape"),
     help="Metrics to compute.",
 )
@@ -59,7 +59,8 @@ def evaluate(
     across multiple forecast files.
 
     Example:
-        forecastbox evaluate --forecasts fc1.json fc2.json --actual actual.csv --tests dm mcs
+        forecastbox evaluate --forecasts fc1.json --forecasts fc2.json \
+            --actual actual.csv --tests dm --tests mcs
     """
     import logging
 
@@ -69,7 +70,7 @@ def evaluate(
     # Load actual values
     try:
         actual_df = pd.read_csv(actual, parse_dates=True, index_col=0)
-        actual_values = actual_df.iloc[:, 0].values
+        actual_values = np.asarray(actual_df.iloc[:, 0].values, dtype=np.float64)
     except Exception as e:
         click.echo(f"Error loading actual values: {e}", err=True)
         sys.exit(1)
@@ -88,16 +89,13 @@ def evaluate(
             sys.exit(1)
 
     # Compute metrics
-    from forecastbox.metrics import point_metrics
+    from forecastbox.metrics import mae, mape, rmse
 
     metric_fns: dict[str, Any] = {
-        "mae": point_metrics.mae,
-        "rmse": point_metrics.rmse,
-        "mape": point_metrics.mape,
+        "mae": mae,
+        "rmse": rmse,
+        "mape": mape,
     }
-
-    if hasattr(point_metrics, "mase"):
-        metric_fns["mase"] = point_metrics.mase
 
     results: dict[str, Any] = {"models": [], "metrics": {}, "tests": {}}
 
@@ -107,12 +105,13 @@ def evaluate(
 
         n = min(len(actual_values), len(fc.point))
         act = actual_values[:n]
-        pred = fc.point[:n]
+        pred = np.asarray(fc.point[:n], dtype=np.float64)
 
         model_metrics: dict[str, float] = {}
         for m_name in metric_names:
             if m_name in metric_fns:
                 try:
+                    # point metrics take (actual, predicted)
                     val = metric_fns[m_name](act, pred)
                     model_metrics[m_name] = round(float(val), 6)
                 except Exception as e:
@@ -128,86 +127,100 @@ def evaluate(
 
     # Run statistical tests
     if tests and len(loaded_forecasts) >= 2:
-        errors_dict: dict[str, np.ndarray] = {}
+        # Aligned point forecasts per model and a common actual window.
+        common_n = min(len(actual_values), *(len(fc.point) for fc in loaded_forecasts))
+        act = actual_values[:common_n]
+        preds: dict[str, np.ndarray] = {}
         for fc in loaded_forecasts:
-            n = min(len(actual_values), len(fc.point))
-            errors_dict[fc.model_name or "Unknown"] = actual_values[:n] - fc.point[:n]
+            name = fc.model_name or "Unknown"
+            preds[name] = np.asarray(fc.point[:common_n], dtype=np.float64)
+
+        pred_list = list(preds.values())
+        names_list = list(preds.keys())
 
         for test_name in tests:
             click.echo(f"\n=== {test_name.upper()} Test ===")
             try:
                 if test_name == "dm":
-                    from forecastbox.evaluation.dm_test import dm_test
+                    from forecastbox.evaluation import diebold_mariano
 
-                    e1 = list(errors_dict.values())[0]
-                    e2 = list(errors_dict.values())[1]
-                    result_dm = dm_test(e1, e2, alpha=alpha)
+                    res = diebold_mariano(act, pred_list[0], pred_list[1])
+                    significant = bool(res.pvalue < alpha)
                     results["tests"]["dm"] = {
-                        "statistic": float(result_dm.statistic),
-                        "p_value": float(result_dm.p_value),
-                        "significant": bool(result_dm.p_value < alpha),
+                        "statistic": float(res.statistic),
+                        "pvalue": float(res.pvalue),
+                        "significant": significant,
                     }
-                    click.echo(f"  Statistic: {result_dm.statistic:.4f}")
-                    click.echo(f"  P-value: {result_dm.p_value:.4f}")
-                    click.echo(f"  Significant at {alpha}: {result_dm.p_value < alpha}")
+                    click.echo(f"  Statistic: {res.statistic:.4f}")
+                    click.echo(f"  P-value: {res.pvalue:.4f}")
+                    click.echo(f"  Significant at {alpha}: {significant}")
+                    click.echo(f"  {res.conclusion(alpha=alpha)}")
 
                 elif test_name == "mcs":
-                    from forecastbox.evaluation.mcs import mcs_test
+                    from forecastbox.evaluation import model_confidence_set
 
-                    errors_matrix = np.column_stack(list(errors_dict.values()))
-                    model_names = list(errors_dict.keys())
-                    result_mcs = mcs_test(errors_matrix, model_names=model_names, alpha=alpha)
+                    res = model_confidence_set(act, preds, alpha=alpha, seed=0)
                     results["tests"]["mcs"] = {
-                        "included_models": result_mcs.included_models,
-                        "p_values": {k: float(v) for k, v in result_mcs.p_values.items()},
+                        "included_models": res.included_models,
+                        "excluded_models": res.excluded_models,
+                        "pvalues": {k: float(v) for k, v in res.pvalues.items()},
                     }
-                    click.echo(f"  Included models: {result_mcs.included_models}")
+                    click.echo(f"  Included models: {res.included_models}")
+                    click.echo(f"  Excluded models: {res.excluded_models}")
 
                 elif test_name == "gw":
-                    from forecastbox.evaluation.gw_test import gw_test
+                    from forecastbox.evaluation import giacomini_white
 
-                    e1 = list(errors_dict.values())[0]
-                    e2 = list(errors_dict.values())[1]
-                    result_gw = gw_test(e1, e2, alpha=alpha)
+                    res = giacomini_white(act, pred_list[0], pred_list[1])
                     results["tests"]["gw"] = {
-                        "statistic": float(result_gw.statistic),
-                        "p_value": float(result_gw.p_value),
+                        "statistic": float(res.statistic),
+                        "pvalue": float(res.pvalue),
+                        "df": int(res.df),
                     }
-                    click.echo(f"  Statistic: {result_gw.statistic:.4f}")
-                    click.echo(f"  P-value: {result_gw.p_value:.4f}")
+                    click.echo(f"  Statistic: {res.statistic:.4f}")
+                    click.echo(f"  P-value: {res.pvalue:.4f}")
+                    click.echo(f"  {res.conclusion(alpha=alpha)}")
 
                 elif test_name == "mz":
-                    from forecastbox.evaluation.mz_test import mz_test
+                    from forecastbox.evaluation import mincer_zarnowitz
 
-                    pred = loaded_forecasts[0].point
-                    n = min(len(actual_values), len(pred))
-                    result_mz = mz_test(actual_values[:n], pred[:n])
+                    res = mincer_zarnowitz(act, pred_list[0])
                     results["tests"]["mz"] = {
-                        "alpha": float(result_mz.alpha),
-                        "beta": float(result_mz.beta),
-                        "p_value": float(result_mz.p_value),
+                        "alpha": float(res.alpha),
+                        "beta": float(res.beta),
+                        "f_statistic": float(res.f_statistic),
+                        "pvalue": float(res.pvalue),
+                        "efficient": bool(res.is_efficient(alpha=alpha)),
                     }
-                    click.echo(f"  Alpha: {result_mz.alpha:.4f}")
-                    click.echo(f"  Beta: {result_mz.beta:.4f}")
+                    click.echo(f"  Intercept (alpha): {res.alpha:.4f}")
+                    click.echo(f"  Slope (beta): {res.beta:.4f}")
+                    click.echo(f"  F-statistic: {res.f_statistic:.4f}")
+                    click.echo(f"  P-value: {res.pvalue:.4f}")
+                    click.echo(f"  Efficient at {alpha}: {res.is_efficient(alpha=alpha)}")
 
                 elif test_name == "encompassing":
-                    from forecastbox.evaluation.encompassing import encompassing_test
+                    from forecastbox.evaluation import encompassing_test
 
-                    f1 = loaded_forecasts[0].point
-                    f2 = loaded_forecasts[1].point
-                    n = min(len(actual_values), len(f1), len(f2))
-                    result_enc = encompassing_test(actual_values[:n], f1[:n], f2[:n])
+                    res = encompassing_test(act, pred_list[0], pred_list[1], alpha=alpha)
                     results["tests"]["encompassing"] = {
-                        "lambda": float(result_enc.lambda_),
-                        "p_value": float(result_enc.p_value),
+                        "lambda_hat": float(res.lambda_hat),
+                        "statistic": float(res.statistic),
+                        "pvalue": float(res.pvalue),
+                        "f1_encompasses_f2": bool(res.f1_encompasses_f2),
+                        "f2_encompasses_f1": bool(res.f2_encompasses_f1),
                     }
-                    click.echo(f"  Lambda: {result_enc.lambda_:.4f}")
-                    click.echo(f"  P-value: {result_enc.p_value:.4f}")
+                    click.echo(f"  Lambda: {res.lambda_hat:.4f}")
+                    click.echo(f"  Statistic: {res.statistic:.4f}")
+                    click.echo(f"  P-value: {res.pvalue:.4f}")
+                    click.echo(f"  f1 encompasses f2: {res.f1_encompasses_f2}")
+                    click.echo(f"  f2 encompasses f1: {res.f2_encompasses_f1}")
 
             except ImportError as e:
                 click.echo(f"  Test module not available: {e}")
             except Exception as e:
                 click.echo(f"  Test failed: {e}")
+        # names_list referenced for potential future labeling; kept aligned with pred_list.
+        logger.debug("Tested models: %s", names_list)
 
     # Save results
     if output:

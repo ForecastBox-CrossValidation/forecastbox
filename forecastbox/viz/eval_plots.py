@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import matplotlib.pyplot as plt
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
+from matplotlib.axes import Axes
+from matplotlib.container import BarContainer
+from matplotlib.figure import Figure
 
 from forecastbox.viz._style import NODESECON_COLORS, format_axis, get_color_palette
 
@@ -13,9 +17,9 @@ def accuracy_plot(
     evaluation: pd.DataFrame,
     metric: str = "rmse",
     by: str = "model",
-    ax: plt.Axes | None = None,
+    ax: Axes | None = None,
     title: str | None = None,
-) -> plt.Axes:
+) -> Axes:
     """Plot accuracy metrics by model or horizon.
 
     Parameters
@@ -37,7 +41,7 @@ def accuracy_plot(
         The matplotlib Axes.
     """
     if ax is None:
-        _, ax = plt.subplots(figsize=(10, 6))
+        _, ax = plt.subplots(figsize=(10, 6))  # type: ignore[reportUnknownMemberType]
 
     if metric not in evaluation.columns:
         available = list(evaluation.columns)
@@ -45,22 +49,23 @@ def accuracy_plot(
 
     if by == "model" and metric in evaluation.columns:
         colors = get_color_palette(len(evaluation))
-        bars = ax.bar(range(len(evaluation)), evaluation[metric].values, color=colors)
-        ax.set_xticks(range(len(evaluation)))
-        ax.set_xticklabels(evaluation.index, rotation=45, ha="right")
+        bars: BarContainer = ax.bar(range(len(evaluation)), evaluation[metric].to_numpy(), color=colors)  # type: ignore[reportUnknownMemberType]
+        ax.set_xticks(range(len(evaluation)))  # type: ignore[reportUnknownMemberType]
+        ax.set_xticklabels(evaluation.index, rotation=45, ha="right")  # type: ignore[reportUnknownMemberType]
 
         # Add value labels on bars
-        for bar in bars:
-            height = bar.get_height()
-            ax.text(
-                bar.get_x() + bar.get_width() / 2.0, height,
+        for bar in bars.patches:
+            height: float = bar.get_height()
+            x_pos: float = bar.get_x() + bar.get_width() / 2.0
+            ax.text(  # type: ignore[reportUnknownMemberType]
+                x_pos, height,
                 f"{height:.3f}", ha="center", va="bottom", fontsize=9,
             )
 
     elif by == "horizon":
         # Plot metric by horizon (if data structured that way)
-        ax.plot(
-            evaluation.index, evaluation[metric].values,
+        ax.plot(  # type: ignore[reportUnknownMemberType]
+            evaluation.index, evaluation[metric].to_numpy(),
             color=NODESECON_COLORS["primary"], marker="o", linewidth=2,
         )
 
@@ -71,9 +76,9 @@ def accuracy_plot(
 def cv_plot(
     cv_results: dict[str, object],
     metric: str = "rmse",
-    ax: plt.Axes | None = None,
+    ax: Axes | None = None,
     title: str | None = None,
-) -> plt.Axes:
+) -> Axes:
     """Plot cross-validation results.
 
     Parameters
@@ -93,7 +98,7 @@ def cv_plot(
         The matplotlib Axes.
     """
     if ax is None:
-        _, ax = plt.subplots(figsize=(10, 6))
+        _, ax = plt.subplots(figsize=(10, 6))  # type: ignore[reportUnknownMemberType]
 
     colors = get_color_palette(len(cv_results))
     model_names: list[str] = []
@@ -102,22 +107,25 @@ def cv_plot(
     for name, result in cv_results.items():
         model_names.append(name)
         if isinstance(result, dict):
-            metric_values.append(result.get(f"mean_{metric}", 0.0))
+            result_dict: dict[str, object] = result  # type: ignore[reportUnknownVariableType]
+            value = result_dict.get(f"mean_{metric}", 0.0)
+            metric_values.append(float(value) if isinstance(value, (int, float)) else 0.0)
         else:
             metric_values.append(0.0)
 
     if model_names:
-        bars = ax.bar(
+        bars: BarContainer = ax.bar(  # type: ignore[reportUnknownMemberType]
             range(len(model_names)), metric_values,
             color=colors[:len(model_names)],
         )
-        ax.set_xticks(range(len(model_names)))
-        ax.set_xticklabels(model_names, rotation=45, ha="right")
+        ax.set_xticks(range(len(model_names)))  # type: ignore[reportUnknownMemberType]
+        ax.set_xticklabels(model_names, rotation=45, ha="right")  # type: ignore[reportUnknownMemberType]
 
-        for bar in bars:
-            height = bar.get_height()
-            ax.text(
-                bar.get_x() + bar.get_width() / 2.0, height,
+        for bar in bars.patches:
+            height: float = bar.get_height()
+            x_pos: float = bar.get_x() + bar.get_width() / 2.0
+            ax.text(  # type: ignore[reportUnknownMemberType]
+                x_pos, height,
                 f"{height:.3f}", ha="center", va="bottom", fontsize=9,
             )
 
@@ -128,8 +136,8 @@ def cv_plot(
 def residual_plot(
     residuals: np.ndarray | pd.Series,
     model_name: str = "",
-    fig: plt.Figure | None = None,
-) -> plt.Figure:
+    fig: Figure | None = None,
+) -> Figure:
     """Create 4-panel residual diagnostic plot.
 
     Panels: (1) Residuals vs time, (2) Histogram, (3) ACF, (4) QQ-plot.
@@ -149,11 +157,11 @@ def residual_plot(
         The matplotlib Figure.
     """
     if fig is None:
-        fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+        fig, axes = plt.subplots(2, 2, figsize=(14, 10))  # type: ignore[reportUnknownMemberType]
     else:
         axes = fig.subplots(2, 2)
 
-    residuals_arr = np.asarray(residuals, dtype=np.float64)
+    residuals_arr: npt.NDArray[np.float64] = np.asarray(residuals, dtype=np.float64)
     n = len(residuals_arr)
 
     # Panel 1: Residuals vs time
@@ -173,7 +181,9 @@ def residual_plot(
         color=NODESECON_COLORS["secondary"], alpha=0.7, edgecolor="white",
     )
     # Overlay normal curve
-    x_range = np.linspace(residuals_arr.min(), residuals_arr.max(), 100)
+    x_range: npt.NDArray[np.float64] = np.linspace(
+        float(residuals_arr.min()), float(residuals_arr.max()), 100,
+    )
     std = np.std(residuals_arr)
     mean = np.mean(residuals_arr)
     if std > 0:
@@ -233,7 +243,7 @@ def residual_plot(
         ylabel="Sample Quantiles", legend=False,
     )
 
-    fig.suptitle(f"Residual Diagnostics: {model_name}", fontsize=16, fontweight="bold", y=1.02)
+    fig.suptitle(f"Residual Diagnostics: {model_name}", fontsize=16, fontweight="bold", y=1.02)  # type: ignore[reportUnknownMemberType]
     fig.tight_layout()
 
     return fig

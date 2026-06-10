@@ -39,7 +39,8 @@ def auto_bandwidth(n_obs: int) -> int:
     if n_obs <= 0:
         msg = f"Sample size T must be positive, got {n_obs}"
         raise ValueError(msg)
-    return int(math.floor(4.0 * (n_obs / 100.0) ** (2.0 / 9.0)))
+    bandwidth: float = 4.0 * (n_obs / 100.0) ** (2.0 / 9.0)
+    return math.floor(bandwidth)
 
 
 def hac_variance(x: NDArray[np.float64], max_lag: int | None = None) -> float:

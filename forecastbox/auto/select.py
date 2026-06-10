@@ -28,6 +28,7 @@ from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.axes import Axes
 from numpy.typing import NDArray
 
 from forecastbox._logging import get_logger
@@ -120,7 +121,9 @@ class AutoSelectResult:
     all_cv_results: dict[str, list[float]]
     metric_name: str
     _y: NDArray[np.float64] = field(repr=False, default_factory=lambda: np.array([]))
-    _family_results: list[_FamilyResult] = field(repr=False, default_factory=list)
+    _family_results: list[_FamilyResult] = field(
+        repr=False, default_factory=lambda: []  # noqa: C408
+    )
 
     def forecast(
         self,
@@ -190,9 +193,9 @@ class AutoSelectResult:
 
     def plot_comparison(
         self,
-        ax: plt.Axes | None = None,
+        ax: Axes | None = None,
         title: str | None = None,
-    ) -> plt.Axes:
+    ) -> Axes:
         """Plot comparison of CV metrics across families.
 
         Parameters
@@ -208,25 +211,27 @@ class AutoSelectResult:
             The matplotlib Axes object.
         """
         if ax is None:
-            _, ax = plt.subplots(figsize=(10, 6))
+            _fig, ax = plt.subplots(figsize=(10, 6))  # type: ignore[reportUnknownMemberType]
 
         families = self.ranking["family"].tolist()
         cv_means = self.ranking["cv_mean"].tolist()
         cv_stds = self.ranking.get("cv_std", pd.Series([0] * len(families))).tolist()
 
         x_pos = range(len(families))
-        bars = ax.bar(x_pos, cv_means, yerr=cv_stds, capsize=5, alpha=0.7)
+        bars = ax.bar(  # type: ignore[reportUnknownMemberType]
+            x_pos, cv_means, yerr=cv_stds, capsize=5, alpha=0.7
+        )
 
         # Highlight best model
         if len(bars) > 0:
-            bars[0].set_color("green")
-            bars[0].set_alpha(1.0)
+            bars[0].set_color("green")  # type: ignore[reportUnknownMemberType]
+            bars[0].set_alpha(1.0)  # type: ignore[reportUnknownMemberType]
 
-        ax.set_xticks(list(x_pos))
-        ax.set_xticklabels(families, rotation=45, ha="right")
-        ax.set_ylabel(self.metric_name.upper())
-        ax.set_title(title or f"Cross-Family Comparison ({self.metric_name.upper()})")
-        ax.grid(True, alpha=0.3, axis="y")
+        ax.set_xticks(list(x_pos))  # type: ignore[reportUnknownMemberType]
+        ax.set_xticklabels(families, rotation=45, ha="right")  # type: ignore[reportUnknownMemberType]
+        ax.set_ylabel(self.metric_name.upper())  # type: ignore[reportUnknownMemberType]
+        ax.set_title(title or f"Cross-Family Comparison ({self.metric_name.upper()})")  # type: ignore[reportUnknownMemberType]
+        ax.grid(True, alpha=0.3, axis="y")  # type: ignore[reportUnknownMemberType]
 
         return ax
 
@@ -508,7 +513,7 @@ class AutoSelect:
                         cv_scores=[np.inf],
                         cv_mean=np.inf,
                         cv_by_horizon=[np.inf] * self.cv_horizon,
-                        forecast_fn=lambda h: None,
+                        forecast_fn=lambda h: None,  # type: ignore[reportUnknownLambdaType]  # noqa: ARG005
                     )
                 )
                 all_cv_results[family] = [np.inf]
@@ -517,7 +522,7 @@ class AutoSelect:
         family_results.sort(key=lambda fr: fr.cv_mean)
 
         # Build ranking DataFrame
-        ranking_data = []
+        ranking_data: list[dict[str, Any]] = []
         for fr in family_results:
             finite_scores = [s for s in fr.cv_scores if np.isfinite(s)]
             ranking_data.append(

@@ -10,6 +10,8 @@ from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 from numpy.typing import NDArray
 
 
@@ -162,10 +164,10 @@ class Forecast:
     def plot(
         self,
         actual: NDArray[np.float64] | None = None,
-        ax: plt.Axes | None = None,
+        ax: Axes | None = None,
         title: str | None = None,
         show_intervals: bool = True,
-    ) -> plt.Axes:
+    ) -> Axes:
         """Plot forecast with confidence bands.
 
         Parameters
@@ -185,30 +187,31 @@ class Forecast:
             The matplotlib Axes object.
         """
         if ax is None:
-            _, ax = plt.subplots(figsize=(12, 6))
+            subplot_result: tuple[Figure, Axes] = plt.subplots(figsize=(12, 6))  # type: ignore[reportUnknownMemberType]
+            ax = subplot_result[1]
 
         x = self.index if self.index is not None else np.arange(self.horizon)
 
-        ax.plot(x, self.point, "b-", label=f"Forecast ({self.model_name})", linewidth=2)
+        ax.plot(x, self.point, "b-", label=f"Forecast ({self.model_name})", linewidth=2)  # type: ignore[reportUnknownMemberType]
 
         if show_intervals:
             if self.lower_95 is not None and self.upper_95 is not None:
-                ax.fill_between(
+                ax.fill_between(  # type: ignore[reportUnknownMemberType]
                     x, self.lower_95, self.upper_95,
                     alpha=0.15, color="blue", label="95% CI",
                 )
             if self.lower_80 is not None and self.upper_80 is not None:
-                ax.fill_between(
+                ax.fill_between(  # type: ignore[reportUnknownMemberType]
                     x, self.lower_80, self.upper_80,
                     alpha=0.30, color="blue", label="80% CI",
                 )
 
         if actual is not None:
-            ax.plot(x, actual, "ro-", label="Actual", linewidth=1.5)
+            ax.plot(x, actual, "ro-", label="Actual", linewidth=1.5)  # type: ignore[reportUnknownMemberType]
 
-        ax.set_title(title or f"Forecast: {self.model_name}")
-        ax.legend()
-        ax.grid(True, alpha=0.3)
+        ax.set_title(title or f"Forecast: {self.model_name}")  # type: ignore[reportUnknownMemberType]
+        ax.legend()  # type: ignore[reportUnknownMemberType]
+        ax.grid(True, alpha=0.3)  # type: ignore[reportUnknownMemberType]
 
         return ax
 

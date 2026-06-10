@@ -158,12 +158,12 @@ Cada diagnostico conecta com a pagina de teoria correspondente e o guia pratico 
 | [Vies](bias.md) | [Avaliacao](../theory/evaluation-theory.md) | [Mincer-Zarnowitz](../user-guide/evaluation/mincer-zarnowitz.md) |
 | [Eficiencia](efficiency.md) | [Avaliacao](../theory/evaluation-theory.md) | [Metricas](../user-guide/evaluation/metrics.md) |
 | [Racionalidade](rationality.md) | [Avaliacao](../theory/evaluation-theory.md) | [Mincer-Zarnowitz](../user-guide/evaluation/mincer-zarnowitz.md) |
-| [DM Test](dm-test.md) | [Diebold-Mariano](../theory/diebold_mariano.md) | [Diebold-Mariano](../user-guide/evaluation/diebold-mariano.md) |
+| [DM Test](dm-test.md) | [Diebold-Mariano](../theory/evaluation-theory.md) | [Diebold-Mariano](../user-guide/evaluation/diebold-mariano.md) |
 | [MCS](mcs-diagnostic.md) | [MCS Teoria](../theory/mcs-theory.md) | [Model Confidence Set](../user-guide/evaluation/mcs.md) |
 | [GW Test](gw-test.md) | [Condicionais](../theory/conditional-theory.md) | [Giacomini-White](../user-guide/evaluation/giacomini-white.md) |
 | [Estabilidade](weight-stability.md) | [Combinacao](../theory/combination-theory.md) | [Escolhendo Metodo](../user-guide/combination/choosing.md) |
 | [Encompassing](encompassing-test.md) | [Combinacao](../theory/combination-theory.md) | [Encompassing](../user-guide/evaluation/encompassing.md) |
-| [News](news-diagnostic.md) | [News Decomposition](../theory/news_decomposition.md) | [News](../user-guide/nowcasting/news.md) |
+| [News](news-diagnostic.md) | [News Decomposition](../theory/nowcasting-theory.md) | [News](../user-guide/nowcasting/news.md) |
 | [Real-Time](real-time.md) | [Nowcasting](../theory/nowcasting-theory.md) | [Vintages](../user-guide/nowcasting/vintages.md) |
 
 ## Guia de Navegacao

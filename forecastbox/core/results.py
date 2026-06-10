@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+from collections.abc import Callable
 
 import numpy as np
 import pandas as pd
@@ -10,7 +11,7 @@ import pandas as pd
 from forecastbox.core.forecast import Forecast
 
 if TYPE_CHECKING:
-    import matplotlib.pyplot as plt
+    from matplotlib.axes import Axes
 
 
 class ForecastResults:
@@ -34,7 +35,7 @@ class ForecastResults:
             np.asarray(actual, dtype=np.float64) if actual is not None else None
         )
         self.metrics: dict[str, dict[str, float]] = {}
-        self.cv_results: dict | None = None
+        self.cv_results: dict[str, object] | None = None
         self.combination: Forecast | None = None
 
     def add_forecast(self, name: str, forecast: Forecast) -> None:
@@ -80,7 +81,9 @@ class ForecastResults:
 
         from forecastbox.metrics.point_metrics import mae, mape, rmse
 
-        metric_fns = {
+        metric_fns: dict[
+            str, Callable[[np.ndarray[Any, np.dtype[np.float64]], np.ndarray[Any, np.dtype[np.float64]]], float]
+        ] = {
             "mae": lambda a, p: mae(a, p),
             "rmse": lambda a, p: rmse(a, p),
             "mape": lambda a, p: mape(a, p),
@@ -177,7 +180,7 @@ class ForecastResults:
         pd.DataFrame
             DataFrame with columns: model, horizon, point, lower_80, upper_80, etc.
         """
-        rows = []
+        rows: list[dict[str, object]] = []
         for name, fc in self.forecasts.items():
             for h in range(fc.horizon):
                 row: dict[str, object] = {
@@ -198,7 +201,7 @@ class ForecastResults:
                 rows.append(row)
         return pd.DataFrame(rows)
 
-    def plot_comparison(self, metric: str = "rmse") -> plt.Axes:
+    def plot_comparison(self, metric: str = "rmse") -> Axes:
         """Bar chart comparing models by a metric.
 
         Parameters
@@ -219,14 +222,14 @@ class ForecastResults:
         names = list(self.metrics.keys())
         values = [self.metrics[n].get(metric, 0.0) for n in names]
 
-        _, ax = plt.subplots(figsize=(10, 5))
-        ax.barh(names, values, color="steelblue")
-        ax.set_xlabel(metric.upper())
-        ax.set_title(f"Model Comparison: {metric.upper()}")
-        ax.grid(True, alpha=0.3, axis="x")
+        _, ax = plt.subplots(figsize=(10, 5))  # type: ignore[reportUnknownMemberType]
+        ax.barh(names, values, color="steelblue")  # type: ignore[reportUnknownMemberType]
+        ax.set_xlabel(metric.upper())  # type: ignore[reportUnknownMemberType]
+        ax.set_title(f"Model Comparison: {metric.upper()}")  # type: ignore[reportUnknownMemberType]
+        ax.grid(True, alpha=0.3, axis="x")  # type: ignore[reportUnknownMemberType]
         return ax
 
-    def plot_forecasts(self, ax: plt.Axes | None = None) -> plt.Axes:
+    def plot_forecasts(self, ax: Axes | None = None) -> Axes:
         """Plot all forecasts overlaid.
 
         Parameters
@@ -242,19 +245,19 @@ class ForecastResults:
         import matplotlib.pyplot as plt
 
         if ax is None:
-            _, ax = plt.subplots(figsize=(12, 6))
+            _, ax = plt.subplots(figsize=(12, 6))  # type: ignore[reportUnknownMemberType]
 
         for name, fc in self.forecasts.items():
             x = fc.index if fc.index is not None else np.arange(fc.horizon)
-            ax.plot(x, fc.point, label=name, linewidth=1.5)
+            ax.plot(x, fc.point, label=name, linewidth=1.5)  # type: ignore[reportUnknownMemberType]
 
         if self.actual is not None:
             x_actual = next(iter(self.forecasts.values())).index
             if x_actual is None:
                 x_actual = np.arange(len(self.actual))
-            ax.plot(x_actual, self.actual, "ko-", label="Actual", linewidth=2)
+            ax.plot(x_actual, self.actual, "ko-", label="Actual", linewidth=2)  # type: ignore[reportUnknownMemberType]
 
-        ax.set_title("Forecast Comparison")
-        ax.legend()
-        ax.grid(True, alpha=0.3)
+        ax.set_title("Forecast Comparison")  # type: ignore[reportUnknownMemberType]
+        ax.legend()  # type: ignore[reportUnknownMemberType]
+        ax.grid(True, alpha=0.3)  # type: ignore[reportUnknownMemberType]
         return ax
